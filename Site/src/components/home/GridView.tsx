@@ -12,21 +12,18 @@ import type { GridSize, Project } from "@/lib/content";
 
 type LayoutMode = "wide" | "compact";
 type GridBreakpoint = "desktop" | "tablet" | "mobile";
-type Distribution = "wide" | "square" | "tall";
 type Point = { x: number; y: number };
 type LayoutTile = Point & { size: number };
 type TileLayout = Record<string, LayoutTile>;
 type LayoutMetrics = {
   breakpoint: GridBreakpoint;
-  distribution: Distribution;
   mode: LayoutMode;
   gap: number;
   captionHeight: number;
   panStep: number;
   viewportWidth: number;
   viewportHeight: number;
-  safeTop: number;
-  safeBottom: number;
+  blockedZones: Obstacle[];
 };
 type PlacedTile = LayoutTile & { slug: string };
 type Obstacle = Point & { width: number; height: number };
@@ -46,14 +43,10 @@ type CanvasStyle = CSSProperties & {
 };
 
 const hoverIntentDelay = 160;
+const tileLoadStagger = 85;
 const tileSizes: Record<LayoutMode, Record<GridSize, number>> = {
   wide: { L: 424, M: 312, S: 200 },
   compact: { L: 280, M: 204, S: 128 },
-};
-const directionWeights: Record<Distribution, number[]> = {
-  wide: [3, 1.5, 0.5, 1.5, 3, 1.5, 0.5, 1.5],
-  square: [1, 1, 1, 1, 1, 1, 1, 1],
-  tall: [0.5, 1.5, 3, 1.5, 0.5, 1.5, 3, 1.5],
 };
 
 function createRandom(seed: number) {
@@ -97,20 +90,16 @@ function overlapsWithGap(
 }
 
 function overlapsMenuZone(candidate: LayoutTile, metrics: LayoutMetrics) {
-  const viewportLeft = metrics.viewportWidth / -2;
-  const viewportRight = metrics.viewportWidth / 2;
-  const viewportTop = metrics.viewportHeight / -2;
-  const viewportBottom = metrics.viewportHeight / 2;
   const candidateRight = candidate.x + candidate.size;
   const candidateBottom = candidate.y + candidate.size;
-  const visibleHorizontally =
-    candidateRight > viewportLeft && candidate.x < viewportRight;
-  const outsideVerticalViewport =
-    candidateBottom <= viewportTop || candidate.y >= viewportBottom;
-  const insideSafeArea =
-    candidate.y >= metrics.safeTop && candidateBottom <= metrics.safeBottom;
 
-  return visibleHorizontally && !outsideVerticalViewport && !insideSafeArea;
+  return metrics.blockedZones.some(
+    (zone) =>
+      candidate.x < zone.x + zone.width &&
+      candidateRight > zone.x &&
+      candidate.y < zone.y + zone.height &&
+      candidateBottom > zone.y,
+  );
 }
 
 function adjacentCandidates(
@@ -239,23 +228,19 @@ function createRandomLayout(
       centerSumY += centerY;
     }
 
-    const candidateSectorUtilization = candidates.map((candidate) => {
+    const candidateSectorCounts = candidates.map((candidate) => {
       const sector = getDirectionSector(
         candidate.x + candidate.size / 2,
         candidate.y + candidate.size / 2,
       );
-      return (
-        (sectorCounts[sector] + 1) /
-        directionWeights[metrics.distribution][sector]
-      );
+      return sectorCounts[sector];
     });
-    const lowestAvailableSectorUtilization = candidateSectorUtilization.length
-      ? Math.min(...candidateSectorUtilization)
+    const lowestAvailableSectorCount = candidateSectorCounts.length
+      ? Math.min(...candidateSectorCounts)
       : 0;
     const balancedCandidates = candidates.filter(
       (_candidate, index) =>
-        candidateSectorUtilization[index] ===
-        lowestAvailableSectorUtilization,
+        candidateSectorCounts[index] === lowestAvailableSectorCount,
     );
     const selected = balancedCandidates.length
       ? balancedCandidates
@@ -357,6 +342,45 @@ function getGridLayer(gridSize: GridSize) {
   return 17;
 }
 
+function getRadialLoadOrder(layout: TileLayout) {
+  return Object.fromEntries(
+    Object.entries(layout)
+      .sort(([, first], [, second]) => {
+        const firstDistance = Math.hypot(
+          first.x + first.size / 2,
+          first.y + first.size / 2,
+        );
+        const secondDistance = Math.hypot(
+          second.x + second.size / 2,
+          second.y + second.size / 2,
+        );
+        return firstDistance - secondDistance;
+      })
+      .map(([slug], index) => [slug, index]),
+  ) as Record<string, number>;
+}
+
+function getListLoadOrder(projects: Project[], centerProject: string) {
+  const centerIndex = Math.max(
+    0,
+    projects.findIndex((project) => project.slug === centerProject),
+  );
+
+  return Object.fromEntries(
+    projects
+      .map((project, index) => ({
+        slug: project.slug,
+        distance: Math.abs(index - centerIndex),
+        index,
+      }))
+      .sort(
+        (first, second) =>
+          first.distance - second.distance || first.index - second.index,
+      )
+      .map((project, index) => [project.slug, index]),
+  ) as Record<string, number>;
+}
+
 function readSpacingValue(styles: CSSStyleDeclaration, name: string, fallback: number) {
   const value = Number.parseFloat(styles.getPropertyValue(name));
   return Number.isFinite(value) ? value : fallback;
@@ -375,15 +399,13 @@ export function GridView({
   const [pan, setPan] = useState<Point>({ x: 0, y: 0 });
   const [metrics, setMetrics] = useState<LayoutMetrics>({
     breakpoint: "desktop",
-    distribution: "wide",
     mode: "compact",
     gap: 24,
     captionHeight: 72,
     panStep: 48,
     viewportWidth: 1280,
     viewportHeight: 720,
-    safeTop: -240,
-    safeBottom: 240,
+    blockedZones: [],
   });
   const dragState = useRef<DragState | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -395,6 +417,11 @@ export function GridView({
   const revealShifts = useMemo(
     () => getRevealShifts(projects, layout, activeSlug, metrics),
     [activeSlug, layout, metrics, projects],
+  );
+  const radialLoadOrder = useMemo(() => getRadialLoadOrder(layout), [layout]);
+  const listLoadOrder = useMemo(
+    () => getListLoadOrder(projects, centerProject),
+    [centerProject, projects],
   );
 
   function clearHoverTimer() {
@@ -482,7 +509,6 @@ export function GridView({
       const spacingXxl = readSpacingValue(styles, "--spacing-xxl", 48);
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-      const aspectRatio = viewportWidth / viewportHeight;
       const breakpoint: GridBreakpoint =
         viewportWidth <= 767
           ? "mobile"
@@ -490,32 +516,27 @@ export function GridView({
             ? "tablet"
             : "desktop";
       const mode = viewportHeight <= 900 ? "compact" : "wide";
-      const distribution: Distribution =
-        aspectRatio > 1.2 ? "wide" : aspectRatio < 0.83 ? "tall" : "square";
       const gridViewport = document.querySelector(".grid-view");
-      const header = document.querySelector(".site-header");
-      const viewSwitcher = document.querySelector(
-        '[role="group"][aria-label="Project display"]',
-      );
       const gridBounds = gridViewport?.getBoundingClientRect();
-      const headerBounds = header?.getBoundingClientRect();
-      const switcherBounds = viewSwitcher?.getBoundingClientRect();
       const canvasWidth = gridBounds?.width ?? viewportWidth;
       const canvasHeight = gridBounds?.height ?? viewportHeight;
-      const canvasTop = gridBounds?.top ?? 0;
-      const safeTop =
-        (headerBounds?.bottom ?? canvasTop) -
-        canvasTop +
-        spacingL -
-        canvasHeight / 2;
-      const safeBottom =
-        (switcherBounds?.top ?? canvasTop + canvasHeight) -
-        canvasTop -
-        spacingL -
-        canvasHeight / 2;
+      const canvasCenterX = (gridBounds?.left ?? 0) + canvasWidth / 2;
+      const canvasCenterY = (gridBounds?.top ?? 0) + canvasHeight / 2;
+      const blockedZones = [
+        ...document.querySelectorAll(
+          '.site-header .nav-label, .site-header .site-intro, [role="group"][aria-label="Project display"]',
+        ),
+      ].map((element) => {
+        const bounds = element.getBoundingClientRect();
+        return {
+          x: bounds.left - canvasCenterX - spacingL,
+          y: bounds.top - canvasCenterY - spacingL,
+          width: bounds.width + spacingL + spacingL,
+          height: bounds.height + spacingL + spacingL,
+        };
+      });
       const nextMetrics = {
         breakpoint,
-        distribution,
         mode,
         gap: spacingL,
         captionHeight:
@@ -523,8 +544,7 @@ export function GridView({
         panStep: spacingXxl,
         viewportWidth: canvasWidth,
         viewportHeight: canvasHeight,
-        safeTop,
-        safeBottom,
+        blockedZones,
       } satisfies LayoutMetrics;
 
       setMetrics((currentMetrics) => {
@@ -589,6 +609,9 @@ export function GridView({
               aria-label={`View ${project.title}: ${project.tags.join(", ")}`}
               className="grid-list-item"
               key={project.slug}
+              style={{
+                animationDelay: `${listLoadOrder[project.slug] * tileLoadStagger}ms`,
+              }}
               type="button"
             >
               <span className="grid-list-media">
@@ -667,6 +690,7 @@ export function GridView({
                 {
                   left: `${position.x}px`,
                   top: `${position.y}px`,
+                  animationDelay: `${radialLoadOrder[project.slug] * tileLoadStagger}ms`,
                   "--tile-layer": isActive
                     ? 30
                     : getGridLayer(project.gridSize),

@@ -127,6 +127,11 @@ button {
   opacity: 1;
 }
 
+.grid-canvas[data-ready] .grid-tile,
+.grid-list-item {
+  animation: grid-tile-load 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 .grid-tile {
   position: absolute;
   z-index: var(--tile-layer);
@@ -282,6 +287,18 @@ button {
   }
 }
 
+@keyframes grid-tile-load {
+  from {
+    opacity: 0;
+    scale: 0.96;
+  }
+
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
 @media (max-width: 1099px), (max-height: 900px) {
   .grid-view {
     --tile-caption-height: calc(var(--spacing-xxl) + var(--spacing-l));
@@ -344,6 +361,7 @@ button {
   *::before,
   *::after {
     scroll-behavior: auto !important;
+    animation-delay: 0s !important;
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
