@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { HomeContent, Project } from "@/lib/content";
-import { SlashLabel } from "@/components/home/SlashLabel";
+import { AsteriskLabel } from "@/components/AsteriskLabel";
 
 export function ProjectHeader({
   home,
@@ -11,23 +11,23 @@ export function ProjectHeader({
 }) {
   return (
     <header className="project-header">
-      <Link
-        className="nav-label slash-interaction project-work-link"
-        href="/"
-      >
-        <SlashLabel>{home.workLabel}</SlashLabel>
-      </Link>
-
       <div className="project-heading">
         <h1>{project.title}</h1>
-        <p>{project.tags.join(" | ")}</p>
+        <p>{project.tags.join(" – ")}</p>
       </div>
 
+      <Link
+        className="nav-label asterisk-interaction project-work-link"
+        href="/"
+      >
+        <AsteriskLabel>{home.workLabel}</AsteriskLabel>
+      </Link>
+
       <button
-        className="nav-label slash-interaction project-about-button"
+        className="nav-label asterisk-interaction project-about-button"
         type="button"
       >
-        <SlashLabel>{home.aboutLabel}</SlashLabel>
+        <AsteriskLabel>{home.aboutLabel}</AsteriskLabel>
       </button>
     </header>
   );

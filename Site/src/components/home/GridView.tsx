@@ -2,7 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type {
   CSSProperties,
   KeyboardEvent,
@@ -443,6 +449,7 @@ export function GridView({
   projects: Project[];
 }) {
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
+  const [activeCaptionHeight, setActiveCaptionHeight] = useState(0);
   const [isPanning, setIsPanning] = useState(false);
   const [layout, setLayout] = useState<TileLayout>({});
   const [pan, setPan] = useState<Point>({ x: 0, y: 0 });
@@ -468,14 +475,27 @@ export function GridView({
     .join("|");
 
   const revealShifts = useMemo(
-    () =>
-      getRevealShifts(
+    () => {
+      const baseMetrics = desktopLayoutMetrics ?? metrics;
+
+      return getRevealShifts(
         projects,
         layout,
         activeSlug,
-        desktopLayoutMetrics ?? metrics,
-      ),
-    [activeSlug, desktopLayoutMetrics, layout, metrics, projects],
+        {
+          ...baseMetrics,
+          captionHeight: activeCaptionHeight || baseMetrics.captionHeight,
+        },
+      );
+    },
+    [
+      activeCaptionHeight,
+      activeSlug,
+      desktopLayoutMetrics,
+      layout,
+      metrics,
+      projects,
+    ],
   );
   const radialLoadOrder = useMemo(() => getRadialLoadOrder(layout), [layout]);
   const listLoadOrder = useMemo(
@@ -680,6 +700,26 @@ export function GridView({
     [],
   );
 
+  useLayoutEffect(() => {
+    if (!activeSlug || metrics.breakpoint !== "desktop") {
+      setActiveCaptionHeight(0);
+      return;
+    }
+
+    const activeTile = document.querySelector(
+      `.grid-tile[data-project-slug="${CSS.escape(activeSlug)}"]`,
+    );
+    const caption = activeTile?.querySelector<HTMLElement>(
+      ".grid-tile-caption",
+    );
+    if (!caption) return;
+
+    const measuredHeight = Math.ceil(caption.getBoundingClientRect().height);
+    setActiveCaptionHeight((currentHeight) =>
+      currentHeight === measuredHeight ? currentHeight : measuredHeight,
+    );
+  }, [activeSlug, layout, metrics.breakpoint]);
+
   const canvasStyle = {
     "--canvas-pan-x": `${pan.x}px`,
     "--canvas-pan-y": `${pan.y}px`,
@@ -762,6 +802,7 @@ export function GridView({
               data-active={isActive || undefined}
               data-center={project.slug === centerProject || undefined}
               data-grid-size={project.gridSize}
+              data-project-slug={project.slug}
               href={`/${project.slug}`}
               key={project.slug}
               onBlur={() => setActiveSlug(null)}

@@ -1,16 +1,26 @@
 "use client";
 
 import { useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import type { HomeContent, HomeView, Project } from "@/lib/content";
 import { GridView } from "./GridView";
 import type { DesktopGridSession } from "./GridView";
 import { IndexView } from "./IndexView";
 import { SiteHeader } from "./SiteHeader";
 import { ViewSwitcher } from "./ViewSwitcher";
+import { ViewportMarks } from "@/components/ViewportMarks";
 
 type PortfolioHomeProps = {
   home: HomeContent;
   projects: Project[];
+};
+
+type PageColorStyle = CSSProperties & {
+  "--page-background": string;
+  "--page-foreground": string;
+  "--page-crop-marks": string;
+  "--page-asterisk": string;
+  "--page-image-border": string;
 };
 
 export function PortfolioHome({ home, projects }: PortfolioHomeProps) {
@@ -19,10 +29,21 @@ export function PortfolioHome({ home, projects }: PortfolioHomeProps) {
     metrics: null,
     seed: null,
   });
+  const pageColorStyle = {
+    "--page-background": home.backgroundColor,
+    "--page-foreground": home.textStrokeColor,
+    "--page-crop-marks": home.cropMarkColor,
+    "--page-asterisk": home.asteriskColor,
+    "--page-image-border": home.imageBorderColor,
+  } as PageColorStyle;
 
   return (
-    <main className="min-h-dvh bg-[#efefef] p-[var(--spacing-sm)] text-[#050505] sm:p-[var(--spacing-l)]">
-      <div className="relative flex min-h-[calc(100dvh-24px)] flex-col border border-[#050505] sm:min-h-[calc(100dvh-48px)]">
+    <main
+      className="min-h-dvh bg-[var(--page-background)] text-[var(--page-foreground)]"
+      style={pageColorStyle}
+    >
+      <div className="relative flex min-h-dvh flex-col">
+        <ViewportMarks />
         <SiteHeader home={home} />
 
         <div className="relative flex min-h-0 flex-1 flex-col">

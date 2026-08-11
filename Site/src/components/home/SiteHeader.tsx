@@ -1,24 +1,24 @@
 import Link from "next/link";
 import type { HomeContent } from "@/lib/content";
-import { SlashLabel } from "./SlashLabel";
+import { AsteriskLabel } from "@/components/AsteriskLabel";
 
 export function SiteHeader({ home }: { home: HomeContent }) {
   return (
-    <header className="site-header pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between px-[var(--spacing-m)] py-[var(--spacing-m)] sm:px-[var(--spacing-l)]">
-      <Link
-        aria-current="page"
-        className="nav-label site-nav-work slash-interaction is-current pointer-events-auto"
-        href="/"
-      >
-        <SlashLabel>{home.workLabel}</SlashLabel>
-      </Link>
-
-      <p className="site-intro absolute left-1/2 top-[var(--spacing-m)] w-[min(327px,50vw)] text-center font-mono-display tracking-[0.15em] uppercase">
+    <header className="site-header pointer-events-none absolute inset-0 z-[70]">
+      <p className="site-intro pointer-events-auto">
         {home.intro}
       </p>
 
-      <button className="nav-label site-nav-about slash-interaction pointer-events-auto" type="button">
-        <SlashLabel>{home.aboutLabel}</SlashLabel>
+      <Link
+        aria-current="page"
+        className="nav-label site-nav-work asterisk-interaction is-active pointer-events-auto"
+        href="/"
+      >
+        <AsteriskLabel>{home.workLabel}</AsteriskLabel>
+      </Link>
+
+      <button className="nav-label site-nav-about asterisk-interaction pointer-events-auto" type="button">
+        <AsteriskLabel>{home.aboutLabel}</AsteriskLabel>
       </button>
     </header>
   );

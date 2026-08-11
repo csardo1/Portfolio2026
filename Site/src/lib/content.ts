@@ -102,6 +102,16 @@ export type HomeContent = {
   workLabel: string;
   aboutLabel: string;
   intro: string;
+  backgroundColor: string;
+  textStrokeColor: string;
+  cropMarkColor: string;
+  asteriskColor: string;
+  imageBorderColor: string;
+  projectPageBackgroundColor: string;
+  projectPageTextStrokeColor: string;
+  projectPageCropMarkColor: string;
+  projectPageAsteriskColor: string;
+  projectPageImageBorderColor: string;
   defaultView: HomeView;
   centerProject: string;
 };
@@ -124,6 +134,12 @@ export type Project = {
   title: string;
   slug: string;
   year: number;
+  backgroundColor: string;
+  textStrokeColor: string;
+  cropMarkColor: string;
+  asteriskColor: string;
+  imageBorderColor: string;
+  customColors: boolean;
   tags: string[];
   homeOrder: number;
   gridSize: GridSize;
@@ -153,6 +169,26 @@ function requiredNumber(value: unknown, field: string, file: string) {
   }
 
   return number;
+}
+
+function requiredBoolean(value: unknown, field: string, file: string) {
+  if (typeof value !== "boolean") {
+    throw new Error(`${field} must be true or false in ${file}.`);
+  }
+
+  return value;
+}
+
+function requiredColor(value: unknown, field: string, file: string) {
+  const color = requiredString(value, field, file);
+
+  if (!/^#(?:[\da-f]{3}|[\da-f]{4}|[\da-f]{6}|[\da-f]{8})$/i.test(color)) {
+    throw new Error(
+      `${field} must be a 3, 4, 6, or 8 digit hex color in ${file}.`,
+    );
+  }
+
+  return color;
 }
 
 function requiredGridSize(value: unknown, file: string): GridSize {
@@ -454,6 +490,56 @@ export async function getHomeContent(): Promise<HomeContent> {
     workLabel: requiredString(data.workLabel, "workLabel", file),
     aboutLabel: requiredString(data.aboutLabel, "aboutLabel", file),
     intro: requiredString(data.intro, "intro", file),
+    backgroundColor: requiredColor(
+      data.backgroundColor,
+      "backgroundColor",
+      file,
+    ),
+    textStrokeColor: requiredColor(
+      data.textStrokeColor,
+      "textStrokeColor",
+      file,
+    ),
+    cropMarkColor: requiredColor(
+      data.cropMarkColor,
+      "cropMarkColor",
+      file,
+    ),
+    asteriskColor: requiredColor(
+      data.asteriskColor,
+      "asteriskColor",
+      file,
+    ),
+    imageBorderColor: requiredColor(
+      data.imageBorderColor,
+      "imageBorderColor",
+      file,
+    ),
+    projectPageBackgroundColor: requiredColor(
+      data.projectPageBackgroundColor,
+      "projectPageBackgroundColor",
+      file,
+    ),
+    projectPageTextStrokeColor: requiredColor(
+      data.projectPageTextStrokeColor,
+      "projectPageTextStrokeColor",
+      file,
+    ),
+    projectPageCropMarkColor: requiredColor(
+      data.projectPageCropMarkColor,
+      "projectPageCropMarkColor",
+      file,
+    ),
+    projectPageAsteriskColor: requiredColor(
+      data.projectPageAsteriskColor,
+      "projectPageAsteriskColor",
+      file,
+    ),
+    projectPageImageBorderColor: requiredColor(
+      data.projectPageImageBorderColor,
+      "projectPageImageBorderColor",
+      file,
+    ),
     defaultView,
     centerProject: requiredString(data.centerProject, "centerProject", file),
   };
@@ -483,6 +569,36 @@ export async function getProjects(): Promise<Project[]> {
         title,
         slug,
         year: requiredNumber(data.year, "year", file),
+        backgroundColor: requiredColor(
+          data.backgroundColor,
+          "backgroundColor",
+          file,
+        ),
+        textStrokeColor: requiredColor(
+          data.textStrokeColor,
+          "textStrokeColor",
+          file,
+        ),
+        cropMarkColor: requiredColor(
+          data.cropMarkColor,
+          "cropMarkColor",
+          file,
+        ),
+        asteriskColor: requiredColor(
+          data.asteriskColor,
+          "asteriskColor",
+          file,
+        ),
+        imageBorderColor: requiredColor(
+          data.imageBorderColor,
+          "imageBorderColor",
+          file,
+        ),
+        customColors: requiredBoolean(
+          data.customColors,
+          "customColors",
+          file,
+        ),
         tags,
         homeOrder: requiredNumber(data.homeOrder, "homeOrder", file),
         gridSize: requiredGridSize(data.gridSize, file),

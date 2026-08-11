@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { Project } from "@/lib/content";
-import { SlashLabel } from "./SlashLabel";
+import { AsteriskLabel } from "@/components/AsteriskLabel";
 
 const indexAnimationResetDelay = 500;
 const indexWaveWidths = [
@@ -117,7 +117,7 @@ export function IndexView({ projects }: { projects: Project[] }) {
             return (
               <li className="relative" key={project.slug}>
                 <Link
-                  className="index-row slash-interaction group grid w-full grid-cols-[auto_1fr_auto] items-center gap-[var(--spacing-sm)] text-left focus-visible:outline-none"
+                  className="index-row asterisk-interaction group grid w-full grid-cols-[auto_1fr_auto] items-center gap-[var(--spacing-sm)] text-left focus-visible:outline-none"
                   href={`/${project.slug}`}
                   onBlur={scheduleAnimationReset}
                   onFocus={() => activateProject(project.slug)}
@@ -125,16 +125,16 @@ export function IndexView({ projects }: { projects: Project[] }) {
                   onMouseLeave={scheduleAnimationReset}
                   aria-label={`${project.title}: ${project.tags.join(", ")}`}
                 >
-                  <SlashLabel className="relative z-30 whitespace-nowrap bg-[#efefef] pr-[var(--spacing-xs)] font-mono-display tracking-[0.15em] uppercase group-focus-visible:underline group-focus-visible:underline-offset-[var(--spacing-xs)]">
+                  <AsteriskLabel className="relative z-30 whitespace-nowrap bg-[var(--page-background)] pr-[var(--spacing-xs)] font-mono-display tracking-[0.1em] uppercase">
                     {project.title}
-                  </SlashLabel>
+                  </AsteriskLabel>
                   <span
                     className="index-rule relative z-10 min-w-3"
                     aria-hidden="true"
                     data-wave-type={waveProfile.type}
                     style={waveProfile.style}
                   />
-                  <span className="relative z-30 whitespace-nowrap bg-[#efefef] pl-[var(--spacing-xs)] font-body tracking-[0.05em] capitalize">
+                  <span className="relative z-30 whitespace-nowrap bg-[var(--page-background)] pl-[var(--spacing-xs)] font-body capitalize">
                     {project.tags.join(" | ")}
                   </span>
                 </Link>
@@ -151,7 +151,7 @@ export function IndexView({ projects }: { projects: Project[] }) {
                   }
                 >
                   <span
-                    className="index-preview-reveal block bg-[#efefef] p-[var(--spacing-sm)]"
+                    className="index-preview-reveal block"
                     onAnimationEnd={() => {
                       if (isActive && isExiting) {
                         setActiveSlug(null);
@@ -164,7 +164,7 @@ export function IndexView({ projects }: { projects: Project[] }) {
                       );
                     }}
                   >
-                    <span className="relative block aspect-square w-full overflow-hidden border border-[#050505] bg-[#d3d3d3]">
+                    <span className="index-preview-media relative block aspect-square w-full overflow-hidden bg-[#d3d3d3]">
                       {isActive ? (
                         <Image
                           alt=""

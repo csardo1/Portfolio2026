@@ -2,6 +2,13 @@
 title: Zoohaven2
 slug: zoohaven2
 year: 2026
+# Set customColors to true to use the five project colors below.
+customColors: false
+backgroundColor: "#f2f2f3"
+textStrokeColor: "#050505"
+cropMarkColor: "#050505"
+asteriskColor: "#050505"
+imageBorderColor: "#050505"
 tags:
   - Identity
   - Typography

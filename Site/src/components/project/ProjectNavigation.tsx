@@ -1,18 +1,6 @@
 import Link from "next/link";
 import type { Project } from "@/lib/content";
-
-function ArrowIcon({ direction }: { direction: "left" | "right" }) {
-  return (
-    <img
-      alt=""
-      aria-hidden="true"
-      className="project-navigation-arrow"
-      height="14"
-      src={`/icons/arrow-${direction}.svg`}
-      width="14"
-    />
-  );
-}
+import { AsteriskLabel } from "@/components/AsteriskLabel";
 
 export function ProjectNavigation({
   nextProject,
@@ -25,20 +13,18 @@ export function ProjectNavigation({
     <nav className="project-navigation" aria-label="Adjacent projects">
       <Link
         aria-label={`Previous project: ${previousProject.title}`}
-        className="project-navigation-link is-previous"
+        className="project-navigation-link asterisk-interaction is-previous"
         href={`/${previousProject.slug}`}
       >
-        <ArrowIcon direction="left" />
-        <span>Previous Project</span>
+        <AsteriskLabel markerPosition="after">Previous Project</AsteriskLabel>
       </Link>
 
       <Link
         aria-label={`Next project: ${nextProject.title}`}
-        className="project-navigation-link is-next"
+        className="project-navigation-link asterisk-interaction is-next"
         href={`/${nextProject.slug}`}
       >
-        <span>Next Project</span>
-        <ArrowIcon direction="right" />
+        <AsteriskLabel>Next Project</AsteriskLabel>
       </Link>
     </nav>
   );
