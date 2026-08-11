@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   CSSProperties,
@@ -24,6 +25,23 @@ type LayoutMetrics = {
   viewportWidth: number;
   viewportHeight: number;
   blockedZones: Obstacle[];
+};
+type SectorWeights = readonly [
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+];
+type DesktopLayoutMetrics = LayoutMetrics & {
+  sectorWeights: SectorWeights;
+};
+export type DesktopGridSession = {
+  metrics: DesktopLayoutMetrics | null;
+  seed: number | null;
 };
 type PlacedTile = LayoutTile & { slug: string };
 type Obstacle = Point & { width: number; height: number };
@@ -135,6 +153,32 @@ function getDirectionSector(x: number, y: number) {
   return Math.floor(angle / sectorSize);
 }
 
+function getAspectSectorWeights(aspectRatio: number): SectorWeights {
+  const clampedRatio = Math.min(2, Math.max(0.5, aspectRatio));
+  const orientation = Math.log2(clampedRatio);
+  const nearSquareLimit = Math.log2(1.25);
+  const directionalStrength = Math.max(
+    0,
+    (Math.abs(orientation) - nearSquareLimit) / (1 - nearSquareLimit),
+  );
+  const landscapeBias = orientation > 0 ? directionalStrength : 0;
+  const portraitBias = orientation < 0 ? directionalStrength : 0;
+  const horizontalWeight = 1 + landscapeBias * 2.8;
+  const verticalWeight = 1 + portraitBias * 2.8;
+  const diagonalWeight = 1 + directionalStrength * 0.45;
+
+  return [
+    horizontalWeight,
+    diagonalWeight,
+    verticalWeight,
+    diagonalWeight,
+    horizontalWeight,
+    diagonalWeight,
+    verticalWeight,
+    diagonalWeight,
+  ];
+}
+
 function findSpiralPosition(
   size: number,
   placedTiles: PlacedTile[],
@@ -175,7 +219,7 @@ function findSpiralPosition(
 function createRandomLayout(
   projects: Project[],
   centerProject: string,
-  metrics: LayoutMetrics,
+  metrics: DesktopLayoutMetrics,
   seed: number,
 ) {
   const random = createRandom(seed);
@@ -228,19 +272,22 @@ function createRandomLayout(
       centerSumY += centerY;
     }
 
-    const candidateSectorCounts = candidates.map((candidate) => {
+    const candidateSectorUtilization = candidates.map((candidate) => {
       const sector = getDirectionSector(
         candidate.x + candidate.size / 2,
         candidate.y + candidate.size / 2,
       );
-      return sectorCounts[sector];
+      return (sectorCounts[sector] + 1) / metrics.sectorWeights[sector];
     });
-    const lowestAvailableSectorCount = candidateSectorCounts.length
-      ? Math.min(...candidateSectorCounts)
+    const lowestAvailableSectorUtilization = candidateSectorUtilization.length
+      ? Math.min(...candidateSectorUtilization)
       : 0;
     const balancedCandidates = candidates.filter(
       (_candidate, index) =>
-        candidateSectorCounts[index] === lowestAvailableSectorCount,
+        Math.abs(
+          candidateSectorUtilization[index] -
+            lowestAvailableSectorUtilization,
+        ) < Number.EPSILON,
     );
     const selected = balancedCandidates.length
       ? balancedCandidates
@@ -388,9 +435,11 @@ function readSpacingValue(styles: CSSStyleDeclaration, name: string, fallback: n
 
 export function GridView({
   centerProject,
+  gridSession,
   projects,
 }: {
   centerProject: string;
+  gridSession: DesktopGridSession;
   projects: Project[];
 }) {
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
@@ -407,16 +456,26 @@ export function GridView({
     viewportHeight: 720,
     blockedZones: [],
   });
+  const [desktopLayoutMetrics, setDesktopLayoutMetrics] =
+    useState<DesktopLayoutMetrics | null>(() => gridSession.metrics);
   const dragState = useRef<DragState | null>(null);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const layoutSeed = useRef<number | null>(null);
+  const desktopLayoutMetricsRef = useRef<DesktopLayoutMetrics | null>(
+    gridSession.metrics,
+  );
   const projectKey = projects
     .map((project) => `${project.slug}:${project.gridSize}`)
     .join("|");
 
   const revealShifts = useMemo(
-    () => getRevealShifts(projects, layout, activeSlug, metrics),
-    [activeSlug, layout, metrics, projects],
+    () =>
+      getRevealShifts(
+        projects,
+        layout,
+        activeSlug,
+        desktopLayoutMetrics ?? metrics,
+      ),
+    [activeSlug, desktopLayoutMetrics, layout, metrics, projects],
   );
   const radialLoadOrder = useMemo(() => getRadialLoadOrder(layout), [layout]);
   const listLoadOrder = useMemo(
@@ -547,6 +606,22 @@ export function GridView({
         blockedZones,
       } satisfies LayoutMetrics;
 
+      if (
+        breakpoint === "desktop" &&
+        desktopLayoutMetricsRef.current === null
+      ) {
+        const frozenDesktopMetrics = {
+          ...nextMetrics,
+          sectorWeights: getAspectSectorWeights(
+            viewportWidth / viewportHeight,
+          ),
+        } satisfies DesktopLayoutMetrics;
+
+        desktopLayoutMetricsRef.current = frozenDesktopMetrics;
+        gridSession.metrics = frozenDesktopMetrics;
+        setDesktopLayoutMetrics(frozenDesktopMetrics);
+      }
+
       setMetrics((currentMetrics) => {
         if (currentMetrics.breakpoint !== breakpoint) {
           requestAnimationFrame(updateMetrics);
@@ -571,18 +646,32 @@ export function GridView({
       return;
     }
 
-    if (layoutSeed.current === null) {
+    if (!desktopLayoutMetrics) return;
+
+    if (gridSession.seed === null) {
       const seed = new Uint32Array(1);
       crypto.getRandomValues(seed);
-      layoutSeed.current = seed[0];
+      gridSession.seed = seed[0];
     }
 
     setLayout(
-      createRandomLayout(projects, centerProject, metrics, layoutSeed.current),
+      createRandomLayout(
+        projects,
+        centerProject,
+        desktopLayoutMetrics,
+        gridSession.seed,
+      ),
     );
     setPan({ x: 0, y: 0 });
     setActiveSlug(null);
-  }, [centerProject, metrics, projectKey, projects]);
+  }, [
+    centerProject,
+    desktopLayoutMetrics,
+    gridSession,
+    metrics.breakpoint,
+    projectKey,
+    projects,
+  ]);
 
   useEffect(
     () => () => {
@@ -605,14 +694,14 @@ export function GridView({
       >
         <div className="grid-list">
           {projects.map((project) => (
-            <button
+            <Link
               aria-label={`View ${project.title}: ${project.tags.join(", ")}`}
               className="grid-list-item"
+              href={`/${project.slug}`}
               key={project.slug}
               style={{
                 animationDelay: `${listLoadOrder[project.slug] * tileLoadStagger}ms`,
               }}
-              type="button"
             >
               <span className="grid-list-media">
                 <Image
@@ -635,7 +724,7 @@ export function GridView({
                   ))}
                 </span>
               </span>
-            </button>
+            </Link>
           ))}
         </div>
       </section>
@@ -667,12 +756,13 @@ export function GridView({
           const shiftY = revealShifts[project.slug] ?? 0;
 
           return (
-            <button
+            <Link
               aria-label={`View ${project.title}: ${project.tags.join(", ")}`}
               className="grid-tile bg-transparent"
               data-active={isActive || undefined}
               data-center={project.slug === centerProject || undefined}
               data-grid-size={project.gridSize}
+              href={`/${project.slug}`}
               key={project.slug}
               onBlur={() => setActiveSlug(null)}
               onFocus={() => {
@@ -698,7 +788,6 @@ export function GridView({
                   "--tile-size": `${position.size}px`,
                 } as TileStyle
               }
-              type="button"
             >
               <span className="grid-tile-media">
                 <Image
@@ -721,7 +810,7 @@ export function GridView({
                   ))}
                 </span>
               </span>
-            </button>
+            </Link>
           );
         })}
       </div>

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { HomeContent, HomeView, Project } from "@/lib/content";
 import { GridView } from "./GridView";
+import type { DesktopGridSession } from "./GridView";
 import { IndexView } from "./IndexView";
 import { SiteHeader } from "./SiteHeader";
 import { ViewSwitcher } from "./ViewSwitcher";
@@ -14,6 +15,10 @@ type PortfolioHomeProps = {
 
 export function PortfolioHome({ home, projects }: PortfolioHomeProps) {
   const [view, setView] = useState<HomeView>(home.defaultView);
+  const desktopGridSession = useRef<DesktopGridSession>({
+    metrics: null,
+    seed: null,
+  });
 
   return (
     <main className="min-h-dvh bg-[#efefef] p-[var(--spacing-sm)] text-[#050505] sm:p-[var(--spacing-l)]">
@@ -25,6 +30,7 @@ export function PortfolioHome({ home, projects }: PortfolioHomeProps) {
             {view === "grid" ? (
               <GridView
                 centerProject={home.centerProject}
+                gridSession={desktopGridSession.current}
                 key="grid"
                 projects={projects}
               />
