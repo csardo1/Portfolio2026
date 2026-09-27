@@ -8,6 +8,10 @@ const projectStructurePattern = /^Structure_.+\.md$/i;
 
 export type HomeView = "grid" | "index";
 export type GridSize = "L" | "M" | "S";
+export type ProjectLayout =
+  | "carousel"
+  | "vertical-scroll"
+  | "window-vertical-scroll";
 export type ProjectMediaType = "image" | "video";
 export type ProjectMediaDisplay =
   | "landscape"
@@ -106,12 +110,10 @@ export type HomeContent = {
   textStrokeColor: string;
   cropMarkColor: string;
   asteriskColor: string;
-  imageBorderColor: string;
   projectPageBackgroundColor: string;
   projectPageTextStrokeColor: string;
   projectPageCropMarkColor: string;
   projectPageAsteriskColor: string;
-  projectPageImageBorderColor: string;
   defaultView: HomeView;
   centerProject: string;
 };
@@ -134,11 +136,11 @@ export type Project = {
   title: string;
   slug: string;
   year: number;
+  layout: ProjectLayout;
   backgroundColor: string;
   textStrokeColor: string;
   cropMarkColor: string;
   asteriskColor: string;
-  imageBorderColor: string;
   customColors: boolean;
   tags: string[];
   homeOrder: number;
@@ -198,6 +200,23 @@ function requiredGridSize(value: unknown, file: string): GridSize {
   }
 
   return gridSize;
+}
+
+function optionalProjectLayout(value: unknown, file: string): ProjectLayout {
+  if (value === undefined || value === null || value === "") return "carousel";
+
+  const layout = requiredString(value, "layout", file).toLowerCase();
+  if (
+    layout !== "carousel" &&
+    layout !== "vertical-scroll" &&
+    layout !== "window-vertical-scroll"
+  ) {
+    throw new Error(
+      `layout must be carousel, vertical-scroll, or window-vertical-scroll in ${file}.`,
+    );
+  }
+
+  return layout;
 }
 
 function requiredMediaType(
@@ -510,11 +529,6 @@ export async function getHomeContent(): Promise<HomeContent> {
       "asteriskColor",
       file,
     ),
-    imageBorderColor: requiredColor(
-      data.imageBorderColor,
-      "imageBorderColor",
-      file,
-    ),
     projectPageBackgroundColor: requiredColor(
       data.projectPageBackgroundColor,
       "projectPageBackgroundColor",
@@ -533,11 +547,6 @@ export async function getHomeContent(): Promise<HomeContent> {
     projectPageAsteriskColor: requiredColor(
       data.projectPageAsteriskColor,
       "projectPageAsteriskColor",
-      file,
-    ),
-    projectPageImageBorderColor: requiredColor(
-      data.projectPageImageBorderColor,
-      "projectPageImageBorderColor",
       file,
     ),
     defaultView,
@@ -569,6 +578,7 @@ export async function getProjects(): Promise<Project[]> {
         title,
         slug,
         year: requiredNumber(data.year, "year", file),
+        layout: optionalProjectLayout(data.layout, file),
         backgroundColor: requiredColor(
           data.backgroundColor,
           "backgroundColor",
@@ -587,11 +597,6 @@ export async function getProjects(): Promise<Project[]> {
         asteriskColor: requiredColor(
           data.asteriskColor,
           "asteriskColor",
-          file,
-        ),
-        imageBorderColor: requiredColor(
-          data.imageBorderColor,
-          "imageBorderColor",
           file,
         ),
         customColors: requiredBoolean(

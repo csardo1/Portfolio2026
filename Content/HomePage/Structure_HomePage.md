@@ -2,17 +2,15 @@
 workLabel: Work
 aboutLabel: About
 intro: Christopher Sardo is a designer currently focusing on graphic and motion design.
-backgroundColor: "#f5f5f5"
+backgroundColor: "#e6e6e6"
 textStrokeColor: "#000000"
 cropMarkColor: "#000000"
-asteriskColor: "#3168ff"
-imageBorderColor: "#000000"
+asteriskColor: "#000000"
 # Global project page colors
-projectPageBackgroundColor: "#f5f5f5"
+projectPageBackgroundColor: "#e6e6e6"
 projectPageTextStrokeColor: "#000000"
 projectPageCropMarkColor: "#000000"
-projectPageAsteriskColor: "#3168ff"
-projectPageImageBorderColor: "#000000"
+projectPageAsteriskColor: "#000000"
 defaultView: grid
 centerProject: wiff
 ---

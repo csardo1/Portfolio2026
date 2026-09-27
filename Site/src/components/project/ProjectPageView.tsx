@@ -3,6 +3,7 @@ import type { HomeContent, Project } from "@/lib/content";
 import { ProjectCarousel } from "./ProjectCarousel";
 import { ProjectHeader } from "./ProjectHeader";
 import { ProjectNavigation } from "./ProjectNavigation";
+import { ProjectVerticalScroll } from "./ProjectVerticalScroll";
 import { ViewportMarks } from "@/components/ViewportMarks";
 
 type PageColorStyle = CSSProperties & {
@@ -10,7 +11,6 @@ type PageColorStyle = CSSProperties & {
   "--page-foreground": string;
   "--page-crop-marks": string;
   "--page-asterisk": string;
-  "--page-image-border": string;
 };
 
 export function ProjectPageView({
@@ -24,35 +24,47 @@ export function ProjectPageView({
   previousProject: Project;
   project: Project;
 }) {
+  const renderedLayout =
+    project.layout === "window-vertical-scroll"
+      ? "vertical-scroll"
+      : project.layout;
   const colors = project.customColors
     ? {
         background: project.backgroundColor,
         foreground: project.textStrokeColor,
         cropMarks: project.cropMarkColor,
         asterisk: project.asteriskColor,
-        imageBorder: project.imageBorderColor,
       }
     : {
         background: home.projectPageBackgroundColor,
         foreground: home.projectPageTextStrokeColor,
         cropMarks: home.projectPageCropMarkColor,
         asterisk: home.projectPageAsteriskColor,
-        imageBorder: home.projectPageImageBorderColor,
       };
   const pageColorStyle = {
     "--page-background": colors.background,
     "--page-foreground": colors.foreground,
     "--page-crop-marks": colors.cropMarks,
     "--page-asterisk": colors.asterisk,
-    "--page-image-border": colors.imageBorder,
   } as PageColorStyle;
 
   return (
-    <main className="project-page" style={pageColorStyle}>
+    <main
+      className="project-page"
+      data-project-layout={renderedLayout}
+      style={pageColorStyle}
+    >
       <div className="project-page-shell">
         <ViewportMarks />
         <ProjectHeader home={home} project={project} />
-        <ProjectCarousel media={project.content} projectTitle={project.title} />
+        {renderedLayout === "vertical-scroll" ? (
+          <ProjectVerticalScroll
+            media={project.content}
+            projectTitle={project.title}
+          />
+        ) : (
+          <ProjectCarousel media={project.content} projectTitle={project.title} />
+        )}
         <ProjectNavigation
           nextProject={nextProject}
           previousProject={previousProject}

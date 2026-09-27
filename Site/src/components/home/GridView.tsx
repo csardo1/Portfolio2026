@@ -12,10 +12,12 @@ import {
 import type {
   CSSProperties,
   KeyboardEvent,
+  MouseEvent,
   PointerEvent,
   WheelEvent,
 } from "react";
 import type { GridSize, Project } from "@/lib/content";
+import type { ProjectWindowSourceRect } from "./ProjectWindowOverlay";
 
 type LayoutMode = "wide" | "compact";
 type GridBreakpoint = "desktop" | "tablet" | "mobile";
@@ -442,10 +444,15 @@ function readSpacingValue(styles: CSSStyleDeclaration, name: string, fallback: n
 export function GridView({
   centerProject,
   gridSession,
+  onOpenWindowProject,
   projects,
 }: {
   centerProject: string;
   gridSession: DesktopGridSession;
+  onOpenWindowProject?: (
+    project: Project,
+    sourceRect: ProjectWindowSourceRect,
+  ) => void;
   projects: Project[];
 }) {
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
@@ -508,6 +515,36 @@ export function GridView({
       clearTimeout(hoverTimer.current);
       hoverTimer.current = null;
     }
+  }
+
+  function handleProjectClick(
+    event: MouseEvent<HTMLAnchorElement>,
+    project: Project,
+  ) {
+    if (
+      project.layout !== "window-vertical-scroll" ||
+      !onOpenWindowProject ||
+      event.button !== 0 ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    const mediaElement = event.currentTarget.querySelector<HTMLElement>(
+      ".grid-tile-media, .grid-list-media",
+    );
+    const rect = (mediaElement ?? event.currentTarget).getBoundingClientRect();
+
+    onOpenWindowProject(project, {
+      height: rect.height,
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+    });
   }
 
   function queueHover(projectSlug: string) {
@@ -737,8 +774,10 @@ export function GridView({
             <Link
               aria-label={`View ${project.title}: ${project.tags.join(", ")}`}
               className="grid-list-item"
+              data-project-slug={project.slug}
               href={`/${project.slug}`}
               key={project.slug}
+              onClick={(event) => handleProjectClick(event, project)}
               style={{
                 animationDelay: `${listLoadOrder[project.slug] * tileLoadStagger}ms`,
               }}
@@ -805,6 +844,7 @@ export function GridView({
               data-project-slug={project.slug}
               href={`/${project.slug}`}
               key={project.slug}
+              onClick={(event) => handleProjectClick(event, project)}
               onBlur={() => setActiveSlug(null)}
               onFocus={() => {
                 clearHoverTimer();

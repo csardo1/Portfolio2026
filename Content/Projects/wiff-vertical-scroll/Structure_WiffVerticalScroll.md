@@ -1,7 +1,8 @@
 ---
-title: Wiff
-slug: wiff
+title: Wiff Vertical Scroll
+slug: wiff-vertical-scroll
 year: 2026
+layout: vertical-scroll
 # Set customColors to true to use the four project colors below.
 customColors: false
 backgroundColor: "#f2f2f3"
@@ -12,7 +13,7 @@ tags:
   - Identity
   - Digital
   - Motion
-homeOrder: 1
+homeOrder: 7
 gridSize: L
 cover: ./Images/CoverStatic.png
 coverAlt: Soft-focus blue and gray Wiff wordmark artwork
@@ -42,6 +43,11 @@ content:
     aspectRatio: Default
     alt: Wiff fragrance packaging photographed vertically
     display: portrait
+  - type: video
+    src: ./Images/y4TYPdlnQICFoVxjzNNoyzCKjI.mp4
+    aspectRatio: Default
+    alt: Wiff fragrance campaign motion sequence
+    display: wide
   - type: image
     src: ./Images/WiffSocial_4x5_06.png
     aspectRatio: Default
@@ -61,11 +67,6 @@ content:
       the imagination toward distinct eras. This approach positions scent as a
       tool for nostalgic or speculative exploration, enhancing the user's
       sense of connection and temporality.
-  - type: video
-    src: ./Images/y4TYPdlnQICFoVxjzNNoyzCKjI.mp4
-    aspectRatio: Default
-    alt: Wiff fragrance campaign motion sequence
-    display: wide
   - type: image
     src: ./Images/VO3yyfhXO0GXigphchuuuB3u4.jpg
     aspectRatio: Default
@@ -86,11 +87,8 @@ content:
     display: landscape
 ---
 
-# Wiff
+# Wiff Vertical Scroll
 
-The ordered `content` list controls carousel placement and optional captions.
-Set `aspectRatio` to `Default` to preserve an image or video's intrinsic
-proportions, or use one of the supported ratio values to crop it. The optional
-`display` field provides the temporary frame shape while a default video loads;
-existing image `display` values are retained for compatibility but are ignored.
-Set `captionPosition` to `top` or `bottom` on any captioned media item.
+This project duplicates Wiff content to test the `vertical-scroll` project
+layout. Content order and captions remain controlled by the ordered `content`
+list above.
