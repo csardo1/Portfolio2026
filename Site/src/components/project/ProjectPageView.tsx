@@ -3,7 +3,6 @@ import type { HomeContent, Project } from "@/lib/content";
 import { ProjectCarousel } from "./ProjectCarousel";
 import { ProjectHeader } from "./ProjectHeader";
 import { ProjectNavigation } from "./ProjectNavigation";
-import { ProjectVerticalScroll } from "./ProjectVerticalScroll";
 import { ViewportMarks } from "@/components/ViewportMarks";
 
 type PageColorStyle = CSSProperties & {
@@ -24,10 +23,6 @@ export function ProjectPageView({
   previousProject: Project;
   project: Project;
 }) {
-  const renderedLayout =
-    project.layout === "window-vertical-scroll"
-      ? "vertical-scroll"
-      : project.layout;
   const colors = project.customColors
     ? {
         background: project.backgroundColor,
@@ -51,20 +46,12 @@ export function ProjectPageView({
   return (
     <main
       className="project-page"
-      data-project-layout={renderedLayout}
       style={pageColorStyle}
     >
       <div className="project-page-shell">
         <ViewportMarks />
         <ProjectHeader home={home} project={project} />
-        {renderedLayout === "vertical-scroll" ? (
-          <ProjectVerticalScroll
-            media={project.content}
-            projectTitle={project.title}
-          />
-        ) : (
-          <ProjectCarousel media={project.content} projectTitle={project.title} />
-        )}
+        <ProjectCarousel media={project.content} projectTitle={project.title} />
         <ProjectNavigation
           nextProject={nextProject}
           previousProject={previousProject}

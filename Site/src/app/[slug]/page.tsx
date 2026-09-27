@@ -7,7 +7,9 @@ type ProjectPageProps = {
   params: Promise<{ slug: string }>;
 };
 
-export const dynamicParams = false;
+// Studio can publish a new project while the development server is running.
+// Unknown or unpublished slugs still return notFound() below.
+export const dynamicParams = true;
 
 export async function generateStaticParams() {
   const projects = await getProjects();

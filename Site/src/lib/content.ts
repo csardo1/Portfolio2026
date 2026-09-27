@@ -8,10 +8,7 @@ const projectStructurePattern = /^Structure_.+\.md$/i;
 
 export type HomeView = "grid" | "index";
 export type GridSize = "L" | "M" | "S";
-export type ProjectLayout =
-  | "carousel"
-  | "vertical-scroll"
-  | "window-vertical-scroll";
+export type ProjectLayout = "carousel";
 export type ProjectMediaType = "image" | "video";
 export type ProjectMediaDisplay =
   | "landscape"
@@ -206,14 +203,8 @@ function optionalProjectLayout(value: unknown, file: string): ProjectLayout {
   if (value === undefined || value === null || value === "") return "carousel";
 
   const layout = requiredString(value, "layout", file).toLowerCase();
-  if (
-    layout !== "carousel" &&
-    layout !== "vertical-scroll" &&
-    layout !== "window-vertical-scroll"
-  ) {
-    throw new Error(
-      `layout must be carousel, vertical-scroll, or window-vertical-scroll in ${file}.`,
-    );
+  if (layout !== "carousel") {
+    throw new Error(`layout must be carousel in ${file}.`);
   }
 
   return layout;

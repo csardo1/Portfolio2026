@@ -4,3 +4,5 @@ out
 public/content
 *.tsbuildinfo
 .DS_Store
+.content-backups
+.studio-write.lock
