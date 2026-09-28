@@ -30,6 +30,9 @@
   --page-background: #f2f2f3;
   --page-foreground: #050505;
   --page-crop-marks: #050505;
+  --site-reveal-hold: 500ms;
+  --site-reveal-expand-duration: 1000ms;
+  --site-reveal-easing: cubic-bezier(0.65, 0, 0.25, 1);
   --page-asterisk: #050505;
   --type-mono-size: 14px;
   --line-height-mono: 20px;
@@ -264,6 +267,111 @@ button {
 
 .viewport-mark-bottom-center .viewport-mark-glyph {
   transform: rotate(-90deg);
+}
+
+.page-viewport-marks {
+  animation: page-marks-appear var(--site-reveal-expand-duration) steps(1, end) var(--site-reveal-hold) both;
+}
+
+.site-loading-reveal {
+  --closed-col: 17.5px;
+  --closed-row: 6.25px;
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  overflow: hidden;
+  isolation: isolate;
+  pointer-events: none;
+}
+
+.site-intro-panel {
+  position: absolute;
+  z-index: 0;
+  background: var(--page-background);
+  animation-duration: var(--site-reveal-expand-duration);
+  animation-delay: var(--site-reveal-hold);
+  animation-timing-function: var(--site-reveal-easing);
+  animation-fill-mode: both;
+}
+
+.site-intro-panel-left,
+.site-intro-panel-right {
+  top: 0;
+  bottom: 0;
+  width: 50.1%;
+  animation-name: site-intro-open-horizontal;
+}
+
+.site-intro-panel-left {
+  left: 0;
+  transform-origin: left center;
+}
+
+.site-intro-panel-right {
+  right: 0;
+  transform-origin: right center;
+}
+
+.site-intro-panel-top,
+.site-intro-panel-bottom {
+  right: 0;
+  left: 0;
+  height: 50.1%;
+  animation-name: site-intro-open-vertical;
+}
+
+.site-intro-panel-top {
+  top: 0;
+  transform-origin: center top;
+}
+
+.site-intro-panel-bottom {
+  bottom: 0;
+  transform-origin: center bottom;
+}
+
+.site-loading-reveal .viewport-marks {
+  position: absolute;
+  z-index: 1;
+}
+
+.site-loading-reveal .viewport-mark {
+  animation: site-intro-marks-expand var(--site-reveal-expand-duration) var(--site-reveal-easing) var(--site-reveal-hold) both;
+}
+
+.site-loading-reveal .viewport-mark-center {
+  left: calc(50% - 10px);
+  transform: none;
+}
+
+.site-loading-reveal .viewport-mark-top-left {
+  --mark-start-x: calc(50vw - var(--closed-col) - var(--spacing-l) - 5px);
+  --mark-start-y: calc(50dvh - var(--closed-row) - var(--spacing-l) - 5px);
+}
+
+.site-loading-reveal .viewport-mark-top-right {
+  --mark-start-x: calc(-50vw + var(--closed-col) + var(--spacing-l) + 5px);
+  --mark-start-y: calc(50dvh - var(--closed-row) - var(--spacing-l) - 5px);
+}
+
+.site-loading-reveal .viewport-mark-bottom-left {
+  --mark-start-x: calc(50vw - var(--closed-col) - var(--spacing-l) - 5px);
+  --mark-start-y: calc(-50dvh + var(--closed-row) + var(--spacing-l) + 5px);
+}
+
+.site-loading-reveal .viewport-mark-bottom-right {
+  --mark-start-x: calc(-50vw + var(--closed-col) + var(--spacing-l) + 5px);
+  --mark-start-y: calc(-50dvh + var(--closed-row) + var(--spacing-l) + 5px);
+}
+
+.site-loading-reveal .viewport-mark-top-center {
+  --mark-start-x: 0px;
+  --mark-start-y: calc(50dvh - var(--closed-row) - var(--spacing-l) - 5px);
+}
+
+.site-loading-reveal .viewport-mark-bottom-center {
+  --mark-start-x: 0px;
+  --mark-start-y: calc(-50dvh + var(--closed-row) + var(--spacing-l) + 5px);
 }
 
 .nav-label:focus-visible,
@@ -801,6 +909,59 @@ button {
   }
 }
 
+@keyframes site-intro-open-horizontal {
+  from {
+    scale: 1 1;
+  }
+
+  100% {
+    scale: 0 1;
+  }
+}
+
+@keyframes site-intro-open-vertical {
+  from {
+    scale: 1 1;
+  }
+
+  100% {
+    scale: 1 0;
+  }
+}
+
+@keyframes site-intro-marks-expand {
+  from {
+    translate: var(--mark-start-x) var(--mark-start-y);
+    opacity: 1;
+  }
+
+  99.9% {
+    translate: 0 0;
+    opacity: 1;
+  }
+
+  100% {
+    translate: 0 0;
+    opacity: 0;
+  }
+}
+
+@media (min-width: 1440px) {
+  :root {
+    --site-reveal-expand-duration: 1300ms;
+  }
+}
+
+@keyframes page-marks-appear {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 @keyframes grid-tile-load {
   from {
     opacity: 0;
@@ -874,6 +1035,14 @@ button {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .site-loading-reveal {
+    display: none;
+  }
+
+  .page-viewport-marks {
+    animation: none;
+  }
+
   *,
   *::before,
   *::after {

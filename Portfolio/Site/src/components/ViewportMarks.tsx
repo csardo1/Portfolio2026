@@ -5,9 +5,9 @@ const cornerMarks = [
   ["bottom-right", "viewport-mark-bottom-right"],
 ] as const;
 
-export function ViewportMarks() {
+export function ViewportMarks({ className = "" }: { className?: string } = {}) {
   return (
-    <div aria-hidden="true" className="viewport-marks">
+    <div aria-hidden="true" className={`viewport-marks ${className}`}>
       {cornerMarks.map(([position, className]) => (
         <span
           className={`viewport-mark viewport-mark-corner ${className}`}

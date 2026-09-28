@@ -2,12 +2,11 @@
 title: Wiff
 slug: wiff
 year: 2026
-# Set customColors to true to use the four project colors below.
-customColors: false
-backgroundColor: "#f2f2f3"
-textStrokeColor: "#050505"
-cropMarkColor: "#050505"
-asteriskColor: "#050505"
+customColors: true
+backgroundColor: '#050505'
+textStrokeColor: '#f2f2f3'
+cropMarkColor: '#f2f2f3'
+asteriskColor: '#f2f2f3'
 tags:
   - Identity
   - Digital
@@ -28,8 +27,8 @@ content:
     caption: >-
       Wiff is a fragrance line that turns the fleeting world of internet
       aesthetics into scents you can hold onto. Online aesthetics are often
-      short-lived, tied to our desires for escape—either to a dreamy past or
-      an imagined future. By translating these ephemeral visuals into tangible
+      short-lived, tied to our desires for escape—either to a dreamy past or an
+      imagined future. By translating these ephemeral visuals into tangible
       fragrances, Wiff invites you to connect emotionally and personally with
       digital trends that might otherwise disappear.
   - type: image
@@ -57,10 +56,10 @@ content:
     caption: >-
       Scent is uniquely powerful in preserving memories and evoking emotion,
       making it the ideal medium to anchor transient online experiences. Each
-      fragrance in Wiff is named and cataloged with a specific year, guiding
-      the imagination toward distinct eras. This approach positions scent as a
-      tool for nostalgic or speculative exploration, enhancing the user's
-      sense of connection and temporality.
+      fragrance in Wiff is named and cataloged with a specific year, guiding the
+      imagination toward distinct eras. This approach positions scent as a tool
+      for nostalgic or speculative exploration, enhancing the user's sense of
+      connection and temporality.
   - type: video
     src: ./Images/y4TYPdlnQICFoVxjzNNoyzCKjI.mp4
     aspectRatio: Default

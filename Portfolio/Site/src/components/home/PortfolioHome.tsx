@@ -9,6 +9,7 @@ import { IndexView } from "./IndexView";
 import { SiteHeader } from "./SiteHeader";
 import { ViewSwitcher } from "./ViewSwitcher";
 import { ViewportMarks } from "@/components/ViewportMarks";
+import { SiteIntro } from "@/components/SiteIntro";
 
 type PortfolioHomeProps = {
   home: HomeContent;
@@ -40,7 +41,7 @@ export function PortfolioHome({ home, projects }: PortfolioHomeProps) {
       style={pageColorStyle}
     >
       <div className="relative flex min-h-dvh flex-col">
-        <ViewportMarks />
+        <ViewportMarks className="page-viewport-marks" />
         <SiteHeader home={home} />
 
         <div className="relative flex min-h-0 flex-1 flex-col">
@@ -60,6 +61,7 @@ export function PortfolioHome({ home, projects }: PortfolioHomeProps) {
           <ViewSwitcher view={view} onChange={setView} />
         </div>
       </div>
+      <SiteIntro />
     </main>
   );
 }

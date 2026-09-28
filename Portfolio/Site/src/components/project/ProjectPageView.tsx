@@ -4,6 +4,7 @@ import { ProjectCarousel } from "./ProjectCarousel";
 import { ProjectHeader } from "./ProjectHeader";
 import { ProjectNavigation } from "./ProjectNavigation";
 import { ViewportMarks } from "@/components/ViewportMarks";
+import { SiteIntro } from "@/components/SiteIntro";
 
 type PageColorStyle = CSSProperties & {
   "--page-background": string;
@@ -49,7 +50,7 @@ export function ProjectPageView({
       style={pageColorStyle}
     >
       <div className="project-page-shell">
-        <ViewportMarks />
+        <ViewportMarks className="page-viewport-marks" />
         <ProjectHeader home={home} project={project} />
         <ProjectCarousel media={project.content} projectTitle={project.title} />
         <ProjectNavigation
@@ -57,6 +58,7 @@ export function ProjectPageView({
           previousProject={previousProject}
         />
       </div>
+      <SiteIntro />
     </main>
   );
 }
