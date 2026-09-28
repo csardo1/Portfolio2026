@@ -644,10 +644,7 @@ button {
 }
 
 .project-media-item {
-  --project-short-side: max(
-    var(--spacing-xxl),
-    min(600px, calc(30dvh - var(--spacing-m)))
-  );
+  --project-short-side: 60dvh;
   position: relative;
   display: block;
   width: max-content;
@@ -669,11 +666,6 @@ button {
   animation: grid-tile-load 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
   animation-delay: var(--project-load-delay, 0ms);
   will-change: opacity, scale;
-}
-
-.project-media-item[data-orientation="portrait"] .project-media-frame {
-  width: var(--project-short-side);
-  height: auto;
 }
 
 .project-media-video {
@@ -787,13 +779,6 @@ button {
 }
 
 @media (min-width: 768px) {
-  .project-media-item {
-    --project-short-side: max(
-      var(--spacing-xxl),
-      min(600px, calc(45dvh - var(--spacing-m)))
-    );
-  }
-
   .project-carousel-track {
     transform: translateY(calc(var(--spacing-xs) * -1));
   }
