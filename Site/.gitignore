@@ -1,8 +1,0 @@
-node_modules
-.next
-out
-public/content
-*.tsbuildinfo
-.DS_Store
-.content-backups
-.studio-write.lock

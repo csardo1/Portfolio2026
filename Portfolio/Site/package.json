@@ -1,0 +1,28 @@
+{
+  "name": "christopher-sardo-portfolio",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "sync-content": "node scripts/sync-content.mjs",
+    "predev": "npm run sync-content",
+    "dev": "next dev --hostname 127.0.0.1",
+    "prebuild": "npm run sync-content",
+    "build": "next build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "gray-matter": "^4.0.3",
+    "next": "^16.3.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "sharp": "^0.35.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2"
+  }
+}

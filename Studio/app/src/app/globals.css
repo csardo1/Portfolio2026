@@ -1,0 +1,37 @@
+@font-face {
+  font-family: "Geist";
+  src: url("../../public/fonts/Geist-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Geist Mono";
+  src: url("../../public/fonts/GeistMono-Light.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Geist Mono";
+  src: url("../../public/fonts/GeistMono-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+:root {
+  --font-body: "Geist", "Helvetica Neue", Arial, sans-serif;
+  --font-mono-display: "Geist Mono", "Courier New", monospace;
+  --spacing-xs: 6px;
+  --spacing-sm: 12px;
+  --spacing-m: 18px;
+  --spacing-l: 24px;
+  --spacing-xl: 36px;
+  --spacing-xxl: 48px;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
