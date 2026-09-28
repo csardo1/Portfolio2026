@@ -47,16 +47,24 @@ are not accidentally included in the exported site.
 
 ## Publish with GitHub Pages
 
-The repository includes a **manual** GitHub Actions workflow at
-`.github/workflows/pages.yml`. It will not publish just because you push a
-commit. When ready, select **GitHub Actions** as the Pages source in the
-repository's **Settings → Pages**, then run **Publish portfolio to GitHub Pages**
-from the Actions tab. The workflow builds `Portfolio/Site/out/` and uses the Pages base
-path automatically, so the repository URL works before a custom domain is set.
+Use `draft` for work in progress. Edit files with Codex or Studio, then commit
+and push the changes to `draft`. Studio saves to local files only, so its edits
+and media must be committed like other changes. The draft branch is for review;
+use the local portfolio preview to see the site before publishing.
 
-Studio saves to local files only. Review, commit, and push the `Portfolio/Content/` edits
-and media before running the workflow. On another computer, pull the latest
-commit before editing. `Portfolio/Site/public/content/` and `Portfolio/Site/out/` are generated and
+When the draft is ready, merge `draft` into `main` and push `main`. In the
+repository's **Settings → Pages**, set **Source** to **GitHub Actions**. Then
+open **Actions → Publish portfolio to GitHub Pages → Run workflow**, select
+`main`, and run it. This is the repository's custom workflow at
+`.github/workflows/pages.yml`. It runs only when requested and only from
+`main`. The GitHub-provided **pages build and deployment** workflow is a
+different workflow and may show the repository README if it published the
+repository root; it does not build the portfolio.
+
+The custom workflow builds `Portfolio/Site/out/` and uses the Pages base path
+automatically, so the repository URL works before a custom domain is set.
+On another computer, pull the latest commit before editing.
+`Portfolio/Site/public/content/` and `Portfolio/Site/out/` are generated and
 should not be committed.
 
 The existing Framer site and `csardo.com` DNS are unchanged by this workflow.
