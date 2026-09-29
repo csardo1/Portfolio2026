@@ -8,6 +8,7 @@ import type { DesktopGridSession } from "./GridView";
 import { IndexView } from "./IndexView";
 import { SiteHeader } from "./SiteHeader";
 import { ViewSwitcher } from "./ViewSwitcher";
+import { PageRootColors } from "@/components/PageRootColors";
 import { ViewportMarks } from "@/components/ViewportMarks";
 import { SiteIntro } from "@/components/SiteIntro";
 
@@ -40,6 +41,12 @@ export function PortfolioHome({ home, projects }: PortfolioHomeProps) {
       className="min-h-dvh bg-[var(--page-background)] text-[var(--page-foreground)]"
       style={pageColorStyle}
     >
+      <PageRootColors
+        asterisk={home.asteriskColor}
+        background={home.backgroundColor}
+        cropMarks={home.cropMarkColor}
+        foreground={home.textStrokeColor}
+      />
       <div className="relative flex min-h-dvh flex-col">
         <ViewportMarks className="page-viewport-marks" />
         <SiteHeader home={home} />

@@ -1,12 +1,11 @@
 import { spawn } from "node:child_process";
-import { existsSync, rmSync, statSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const studioRoot = path.resolve(import.meta.dirname, "..");
-const siteRoot = path.resolve(studioRoot, "..", "..", "Portfolio", "Site");
 const studioUrl = "http://localhost:3001/";
-const previewUrl = "http://localhost:3000/";
 const stopRequest = path.join(studioRoot, ".stop-request");
+const launcherState = path.join(studioRoot, ".local-launcher.json");
 const children = [];
 let closing = false;
 
@@ -37,9 +36,24 @@ async function ensureDependencies(root, label) {
 function stop() {
   if (closing) return;
   closing = true;
+  clearLauncherState();
   for (const child of children) {
     if (child.exitCode === null) child.kill("SIGTERM");
   }
+}
+
+function saveLauncherState() {
+  writeFileSync(launcherState, `${JSON.stringify({
+    launcherPid: process.pid,
+    serverPids: children.map((child) => child.pid),
+  })}\n`);
+}
+
+function clearLauncherState() {
+  try {
+    const current = JSON.parse(readFileSync(launcherState, "utf8"));
+    if (current.launcherPid === process.pid) rmSync(launcherState, { force: true });
+  } catch { /* The state file may already be gone or replaced. */ }
 }
 
 function startNext(root, port, label) {
@@ -48,11 +62,13 @@ function startNext(root, port, label) {
     stdio: "inherit",
   });
   children.push(child);
+  saveLauncherState();
   child.once("error", (error) => { console.error(`${label}:`, error); stop(); process.exitCode = 1; });
   child.once("exit", (code) => {
     if (!closing) {
       const requested = existsSync(stopRequest);
       if (requested) rmSync(stopRequest, { force: true });
+      clearLauncherState();
       if (requested) console.log(`${label} stopped.`);
       else console.error(`${label} stopped unexpectedly (${code}).`);
       stop();
@@ -86,18 +102,15 @@ process.on("SIGTERM", stop);
 
 try {
   rmSync(stopRequest, { force: true });
-  await ensureDependencies(siteRoot, "portfolio");
   await ensureDependencies(studioRoot, "Studio");
-  await run(process.execPath, [path.join(siteRoot, "scripts", "sync-content.mjs")], siteRoot);
-  startNext(siteRoot, 3000, "Portfolio preview");
   startNext(studioRoot, 3001, "Portfolio Studio");
-  await Promise.all([waitFor(previewUrl), waitFor(studioUrl)]);
+  await waitFor(studioUrl);
   console.log(`Studio: ${studioUrl}`);
-  console.log(`Portfolio preview: ${previewUrl}`);
-  console.log("Press Ctrl+C to stop both local servers.");
+  console.log("Press Ctrl+C to stop Studio.");
   if (process.env.PORTFOLIO_SKIP_BROWSER !== "1") openBrowser(studioUrl);
 } catch (error) {
   console.error(error);
   stop();
+  clearLauncherState();
   process.exitCode = 1;
 }

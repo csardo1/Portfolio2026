@@ -4,3 +4,4 @@ node_modules
 .content-backups
 .studio-write.lock
 .stop-request
+.local-launcher.json

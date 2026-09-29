@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync, rmSync, statSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
 
@@ -8,6 +8,7 @@ const port = 3000;
 const url = `http://localhost:${port}/`;
 const nextBinary = path.join(siteRoot, "node_modules", "next", "dist", "bin", "next");
 const stopRequest = path.join(siteRoot, ".stop-request");
+const launcherState = path.join(siteRoot, ".local-launcher.json");
 let server;
 
 function run(command, args, shell = false) {
@@ -30,7 +31,7 @@ function ensurePortAvailable() {
   return new Promise((resolve, reject) => {
     const probe = net.createServer();
     probe.once("error", (error) => reject(error.code === "EADDRINUSE"
-      ? new Error("Port 3000 is already in use. If Studio is running, the portfolio is already available at http://localhost:3000/. Otherwise, close the other server and try again.")
+      ? new Error("Port 3000 is already in use. Stop the existing portfolio preview or other server, then try again.")
       : error));
     probe.listen(port, "127.0.0.1", () => probe.close(resolve));
   });
@@ -59,6 +60,14 @@ function openBrowser() {
 
 function stop() {
   if (server && server.exitCode === null) server.kill("SIGTERM");
+  clearLauncherState();
+}
+
+function clearLauncherState() {
+  try {
+    const current = JSON.parse(readFileSync(launcherState, "utf8"));
+    if (current.launcherPid === process.pid) rmSync(launcherState, { force: true });
+  } catch { /* The state file may already be gone or replaced. */ }
 }
 
 process.on("SIGINT", stop);
@@ -73,8 +82,10 @@ try {
     cwd: siteRoot,
     stdio: "inherit",
   });
+  writeFileSync(launcherState, `${JSON.stringify({ launcherPid: process.pid, serverPids: [server.pid] })}\n`);
   server.once("error", (error) => { console.error(error); process.exitCode = 1; });
   server.once("exit", (code) => {
+    clearLauncherState();
     const requested = existsSync(stopRequest);
     if (requested) rmSync(stopRequest, { force: true });
     if (!requested && code !== 0) process.exitCode = 1;
@@ -86,5 +97,6 @@ try {
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);
   stop();
+  clearLauncherState();
   process.exitCode = 1;
 }

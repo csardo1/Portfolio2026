@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { assetUrl, colorFields, colorLabels, ratios } from "@/lib/studio-types";
+import { assetUrl, colorFields, colorLabels, placements, ratios } from "@/lib/studio-types";
 import type { HomeDraft, MediaDraft, ProjectDraft, StudioAsset, StudioProject, StudioState } from "@/lib/studio-types";
 
 const portfolioPreviewUrl = process.env.NEXT_PUBLIC_PORTFOLIO_PREVIEW_URL ?? "http://localhost:3000";
@@ -90,7 +90,7 @@ export function Studio() {
   }
   function addAsset(asset: StudioAsset) {
     if (!project) return;
-    const item: MediaDraft = { type: asset.type, src: asset.src, alt: "", aspectRatio: "Default", captionPosition: "bottom" };
+    const item: MediaDraft = { type: asset.type, src: asset.src, alt: "", aspectRatio: "Default", captionPosition: "bottom", placement: "full" };
     changeProject("content", [...project.data.content, item]); setAssetChoice("");
   }
   async function save() {
@@ -142,7 +142,7 @@ export function Studio() {
         setState((current) => current ? { ...current, projects: current.projects.map((p) => p.id === project.id ? { ...p, assets: [...p.assets, ...added] } : p) } : null);
         setProject((current) => current ? { ...current, assets: [...current.assets, ...added], data: {
           ...current.data,
-          ...(cover ? { cover: added[0].src } : { content: [...current.data.content, ...added.map((asset) => ({ type: asset.type, src: asset.src, alt: "", aspectRatio: "Default", captionPosition: "bottom" }))] }),
+          ...(cover ? { cover: added[0].src } : { content: [...current.data.content, ...added.map((asset) => ({ type: asset.type, src: asset.src, alt: "", aspectRatio: "Default", captionPosition: "bottom", placement: "full" }))] }),
         } } : null);
         setDirty(true);
       }
@@ -196,6 +196,7 @@ export function Studio() {
             <Field label="Year"><input type="number" min="1900" max="2200" value={project.data.year} onChange={(e) => changeProject("year", Number(e.target.value))} /></Field>
             <Field label="Homepage order" hint="Smaller numbers appear first in the Index and project navigation."><input type="number" min="0" value={project.data.homeOrder} onChange={(e) => changeProject("homeOrder", Number(e.target.value))} /></Field>
             <Field label="Grid tile size"><select value={project.data.gridSize} onChange={(e) => changeProject("gridSize", e.target.value)}>{["L", "M", "S"].map((size) => <option key={size}>{size}</option>)}</select></Field>
+            <Field label="Project page layout"><select value={project.data.layout ?? "carousel"} onChange={(e) => changeProject("layout", e.target.value)}><option value="carousel">Horizontal carousel</option><option value="split-stack">Captions left / media stack right</option></select></Field>
           </div>
           <Field label="Tags" hint="Separate tags with commas."><input value={Array.isArray(project.data.tags) ? project.data.tags.join(", ") : ""} onChange={(e) => changeProject("tags", e.target.value.split(",").map((tag) => tag.trimStart()))} onBlur={() => changeProject("tags", project.data.tags.map((tag) => tag.trim()).filter(Boolean))} /></Field>
           <label className="studio-check"><input type="checkbox" checked={project.data.published} onChange={(e) => changeProject("published", e.target.checked)} /> Published on the portfolio</label>
@@ -206,7 +207,7 @@ export function Studio() {
             <label className="studio-upload">Upload a cover<input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={(e) => { void upload(e.target.files, true); e.target.value = ""; }} /></label>
             <Field label="Cover description" hint="A short visual description for accessibility."><input value={project.data.coverAlt} onChange={(e) => changeProject("coverAlt", e.target.value)} /></Field>
           </section></div>
-          <section className="studio-panel"><div className="studio-section-heading"><div><h2>Project media <span>{project.data.content.length}</span></h2><p>Ordered from first to last. Move items with the arrows.</p></div><label className="studio-upload">+ Upload images or videos<input type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,image/avif,video/mp4,video/webm,video/quicktime" onChange={(e) => { void upload(e.target.files); e.target.value = ""; }} /></label></div>
+          <section className="studio-panel"><div className="studio-section-heading"><div><h2>Project media <span>{project.data.content.length}</span></h2><p>Ordered from first to last. Move items with the arrows{project.data.layout === "split-stack" ? " and set their position in the right column" : ""}.</p></div><label className="studio-upload">+ Upload images or videos<input type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,image/avif,video/mp4,video/webm,video/quicktime" onChange={(e) => { void upload(e.target.files); e.target.value = ""; }} /></label></div>
             <div className="studio-add-media"><Field label="Add media already in the project folder"><select value={assetChoice} onChange={(e) => setAssetChoice(e.target.value)}><option value="">Choose a file…</option>{project.assets.map((asset) => <option key={asset.src} value={asset.src}>{asset.name}</option>)}</select></Field><button className="studio-button" disabled={!assetChoice} onClick={() => { const asset = project.assets.find((a) => a.src === assetChoice); if (asset) addAsset(asset); }}>Add to sequence</button></div>
             <p className="studio-help">Uploads save original files immediately (up to 100 MB each). Save changes to update the media sequence. Removing an item keeps its original file.</p>
             {!project.data.content.length && <div className="studio-empty">Your project starts here. Upload a few images or choose existing files above.</div>}
@@ -214,7 +215,7 @@ export function Studio() {
               <div className="studio-media-preview"><Thumbnail id={project.id} src={item.src} type={item.type} alt={item.alt} /><p>{item.src.split("/").pop()}</p></div>
               <div className="studio-media-form"><div className="studio-media-header"><h3>{String(index + 1).padStart(2, "0")} / {item.type}</h3><div><button className="studio-button" disabled={index === 0} aria-label={`Move media ${index + 1} up`} onClick={() => moveMedia(index, -1)}>↑</button><button className="studio-button" disabled={index === project.data.content.length - 1} aria-label={`Move media ${index + 1} down`} onClick={() => moveMedia(index, 1)}>↓</button><button className="studio-button studio-remove" aria-label={`Remove media ${index + 1} from sequence`} onClick={() => changeProject("content", project.data.content.filter((_, i) => i !== index))}>Remove</button></div></div>
                 <Field label="Image / video description"><input value={item.alt ?? ""} onChange={(e) => changeMedia(index, "alt", e.target.value)} /></Field>
-                <div className="studio-fields"><Field label="Aspect ratio"><select value={item.aspectRatio ?? "Default"} onChange={(e) => changeMedia(index, "aspectRatio", e.target.value)}>{ratios.map((ratio) => <option key={ratio} value={ratio}>{ratio === "Default" ? "Default — original proportions" : ratio}</option>)}</select></Field><Field label="Caption position"><select value={item.captionPosition ?? "bottom"} onChange={(e) => changeMedia(index, "captionPosition", e.target.value)}><option value="bottom">Below image</option><option value="top">Above image</option></select></Field></div>
+                <div className="studio-fields"><Field label="Aspect ratio"><select value={item.aspectRatio ?? "Default"} onChange={(e) => changeMedia(index, "aspectRatio", e.target.value)}>{ratios.map((ratio) => <option key={ratio} value={ratio}>{ratio === "Default" ? "Default — original proportions" : ratio}</option>)}</select></Field>{project.data.layout === "split-stack" ? <Field label="Placement in right column" hint="Inset placements use 72% of the column width."><select value={item.placement ?? "full"} onChange={(e) => changeMedia(index, "placement", e.target.value)}>{placements.map((placement) => <option key={placement} value={placement}>{placement === "full" ? "Full width" : `Inset — ${placement}`}</option>)}</select></Field> : <Field label="Caption position"><select value={item.captionPosition ?? "bottom"} onChange={(e) => changeMedia(index, "captionPosition", e.target.value)}><option value="bottom">Below image</option><option value="top">Above image</option></select></Field>}</div>
                 {item.type === "video" && <Field label="Video poster (optional)"><select value={item.poster ?? ""} onChange={(e) => changeMedia(index, "poster", e.target.value)}><option value="">No poster</option>{project.assets.filter((a) => a.type === "image").map((a) => <option value={a.src} key={a.src}>{a.name}</option>)}</select></Field>}
                 <Field label="Caption label"><input value={item.captionLabel ?? ""} placeholder="01 –" onChange={(e) => changeMedia(index, "captionLabel", e.target.value)} /></Field>
                 <Field label="Caption"><textarea rows={4} value={item.caption ?? ""} placeholder="Tell the story behind this image…" onChange={(e) => changeMedia(index, "caption", e.target.value)} /></Field>

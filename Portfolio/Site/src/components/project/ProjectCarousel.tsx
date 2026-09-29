@@ -5,10 +5,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   CSSProperties,
   KeyboardEvent,
-  RefObject,
   WheelEvent,
 } from "react";
 import type { ProjectMedia } from "@/lib/content";
+import { ProjectDecodingCaption } from "./ProjectDecodingCaption";
 
 type ProjectMediaStyle = CSSProperties & {
   "--project-aspect-ratio": string;
@@ -19,217 +19,6 @@ type IntrinsicVideoRatio = {
   aspectRatio: string;
   orientation: "landscape" | "portrait" | "square";
 };
-
-const captionDecodeUppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const captionDecodeLowercase = "abcdefghijklmnopqrstuvwxyz";
-const captionDecodeDigits = "0123456789";
-const captionDecodeDuration = 720;
-const captionDecodeActiveCharacters = 24;
-
-function scrambledCharacter(character: string, index: number, tick: number) {
-  const characterCode = character.charCodeAt(0);
-  const alphabet = /[a-z]/.test(character)
-    ? captionDecodeLowercase
-    : /[A-Z]/.test(character)
-      ? captionDecodeUppercase
-      : /[0-9]/.test(character)
-        ? captionDecodeDigits
-        : null;
-
-  if (!alphabet) return character;
-
-  return alphabet[(characterCode + index * 7 + tick * 11) % alphabet.length];
-}
-
-function DecodingText({
-  cursorVisible,
-  resolvedCharacters,
-  text,
-  tick,
-}: {
-  cursorVisible: boolean;
-  resolvedCharacters: number;
-  text: string;
-  tick: number;
-}) {
-  const displayedText = [...text]
-    .map((character, index) => {
-      if (index < resolvedCharacters) return character;
-
-      const isWithinActiveFront =
-        index - resolvedCharacters < captionDecodeActiveCharacters;
-
-      return scrambledCharacter(
-        character,
-        index,
-        isWithinActiveFront ? tick : 0,
-      );
-    })
-    .join("");
-  const textBeforeCursor = displayedText.slice(0, resolvedCharacters);
-  const textAfterCursor = displayedText.slice(resolvedCharacters);
-
-  return (
-    <span className="caption-decode-text">
-      <span aria-hidden="true" className="caption-decode-text-reserve">
-        {text}
-      </span>
-      <span aria-hidden="true" className="caption-decode-text-visible">
-        {cursorVisible ? textBeforeCursor : displayedText}
-        {cursorVisible ? (
-          <span className="caption-decode-cursor-anchor">
-            <span
-              aria-hidden="true"
-              className="asterisk-marker caption-decode-cursor"
-            >
-              *
-            </span>
-          </span>
-        ) : null}
-        {cursorVisible ? textAfterCursor : null}
-      </span>
-    </span>
-  );
-}
-
-function DecodingCaption({
-  carouselRef,
-  item,
-}: {
-  carouselRef: RefObject<HTMLElement | null>;
-  item: ProjectMedia;
-}) {
-  const captionRef = useRef<HTMLElement>(null);
-  const animationFrameRef = useRef<number | null>(null);
-  const hasStartedRef = useRef(false);
-  const label = item.captionLabel ?? "";
-  const body = item.caption ?? "";
-  const separatorLength = label && body ? 1 : 0;
-  const totalCharacters = label.length + separatorLength + body.length;
-  const [decodeState, setDecodeState] = useState({
-    complete: false,
-    resolvedCharacters: 0,
-    tick: 0,
-  });
-
-  const startDecoding = useCallback(() => {
-    if (hasStartedRef.current) return;
-    hasStartedRef.current = true;
-
-    if (
-      totalCharacters === 0 ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) {
-      setDecodeState({
-        complete: true,
-        resolvedCharacters: totalCharacters,
-        tick: 0,
-      });
-      return;
-    }
-
-    const startedAt = performance.now();
-
-    function decodeFrame(now: number) {
-      const elapsed = now - startedAt;
-      const progress = Math.min(1, elapsed / captionDecodeDuration);
-
-      setDecodeState({
-        complete: progress === 1,
-        resolvedCharacters: Math.min(
-          totalCharacters,
-          Math.floor(totalCharacters * progress),
-        ),
-        tick: Math.floor(elapsed / 48),
-      });
-
-      if (progress < 1) {
-        animationFrameRef.current = requestAnimationFrame(decodeFrame);
-      } else {
-        animationFrameRef.current = null;
-      }
-    }
-
-    animationFrameRef.current = requestAnimationFrame(decodeFrame);
-  }, [totalCharacters]);
-
-  useEffect(() => {
-    const caption = captionRef.current;
-    const carousel = carouselRef.current;
-    if (!caption || !carousel) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) return;
-        startDecoding();
-        observer.disconnect();
-      },
-      {
-        root: carousel,
-        rootMargin: "0px -8% 0px -8%",
-        threshold: 0.25,
-      },
-    );
-
-    observer.observe(caption);
-
-    return () => {
-      observer.disconnect();
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [carouselRef, startDecoding]);
-
-  const labelResolvedCharacters = Math.min(
-    label.length,
-    decodeState.resolvedCharacters,
-  );
-  const bodyResolvedCharacters = Math.min(
-    body.length,
-    Math.max(
-      0,
-      decodeState.resolvedCharacters - label.length - separatorLength,
-    ),
-  );
-  const cursorIsInLabel =
-    Boolean(label) &&
-    ((!decodeState.complete &&
-      decodeState.resolvedCharacters <= label.length) ||
-      (decodeState.complete && !body));
-  const cursorIsInBody = Boolean(body) && !cursorIsInLabel;
-  const accessibleCaption = [label, body].filter(Boolean).join(" ");
-
-  return (
-    <figcaption
-      aria-label={accessibleCaption}
-      className="project-media-caption"
-      data-decoding={!decodeState.complete || undefined}
-      ref={captionRef}
-    >
-      {label ? (
-        <span aria-hidden="true" className="project-media-caption-label">
-          <DecodingText
-            cursorVisible={cursorIsInLabel}
-            resolvedCharacters={labelResolvedCharacters}
-            text={label}
-            tick={decodeState.tick}
-          />
-        </span>
-      ) : null}
-      {body ? (
-        <p aria-hidden="true" className="project-media-caption-body">
-          <DecodingText
-            cursorVisible={cursorIsInBody}
-            resolvedCharacters={bodyResolvedCharacters}
-            text={body}
-            tick={decodeState.tick}
-          />
-        </p>
-      ) : null}
-    </figcaption>
-  );
-}
 
 function videoOrientation(aspectRatio: number) {
   if (aspectRatio >= 0.95 && aspectRatio <= 1.05) return "square";
@@ -475,7 +264,10 @@ export function ProjectCarousel({
               </div>
 
               {hasCaption ? (
-                <DecodingCaption carouselRef={carouselRef} item={item} />
+                <ProjectDecodingCaption
+                  item={item}
+                  rootRef={carouselRef}
+                />
               ) : null}
             </figure>
           );

@@ -3,7 +3,7 @@ import { copyFile, mkdir, open, readFile, readdir, realpath, rename, stat, unlin
 import path from "node:path";
 import matter from "gray-matter";
 import sharp from "sharp";
-import { colorFields, layouts, ratios } from "./studio-types";
+import { colorFields, layouts, placements, ratios } from "./studio-types";
 import type { HomeDraft, ProjectDraft, StudioAsset, StudioProject, StudioState } from "./studio-types";
 
 const root = path.resolve(process.cwd(), "..", "..", "Portfolio", "Content");
@@ -114,7 +114,7 @@ async function validateProject(id: string, data: ProjectDraft, state: StudioStat
   if (!Number.isInteger(data.year) || data.year < 1900 || data.year > 2200) throw new StudioError("Enter a valid year.");
   if (!Number.isInteger(data.homeOrder) || data.homeOrder < 0) throw new StudioError("Homepage order must be a whole number of zero or greater.");
   if (!["L", "M", "S"].includes(data.gridSize)) throw new StudioError("Grid size must be L, M or S.");
-  if (!layouts.includes(data.layout ?? "carousel")) throw new StudioError("Project layout must be carousel.");
+  if (!layouts.includes(data.layout ?? "carousel")) throw new StudioError("Choose a supported project layout.");
   if (typeof data.published !== "boolean" || typeof data.customColors !== "boolean") throw new StudioError("Publication and custom colors must be on or off.");
   if (!Array.isArray(data.tags) || data.tags.some((tag) => typeof tag !== "string" || !tag.trim())) throw new StudioError("Tags must be nonempty text.");
   colors(data);
@@ -128,6 +128,7 @@ async function validateProject(id: string, data: ProjectDraft, state: StudioStat
     await checkAsset(id, item.src, item.type);
     if (!ratios.includes(item.aspectRatio ?? "Default")) throw new StudioError("Choose a supported aspect ratio.");
     if (!["top", "bottom"].includes(item.captionPosition ?? "bottom")) throw new StudioError("Caption position must be top or bottom.");
+    if (!placements.includes(item.placement ?? "full")) throw new StudioError("Media placement must be full, left, center or right.");
     if (item.display && !["landscape", "portrait", "square", "wide"].includes(item.display)) throw new StudioError("Unsupported video placeholder shape.");
     for (const key of ["alt", "caption", "captionLabel"] as const) if (item[key] !== undefined && typeof item[key] !== "string") throw new StudioError(`${key} must be text.`);
     if (item.poster) await checkAsset(id, item.poster, "image");

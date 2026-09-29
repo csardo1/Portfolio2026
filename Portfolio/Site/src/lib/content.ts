@@ -9,8 +9,9 @@ const projectStructurePattern = /^Structure_.+\.md$/i;
 
 export type HomeView = "grid" | "index";
 export type GridSize = "L" | "M" | "S";
-export type ProjectLayout = "carousel";
+export type ProjectLayout = "carousel" | "split-stack";
 export type ProjectMediaType = "image" | "video";
+export type ProjectMediaPlacement = "full" | "left" | "center" | "right";
 export type ProjectMediaDisplay =
   | "landscape"
   | "portrait"
@@ -123,6 +124,7 @@ export type ProjectMedia = {
   captionLabel?: string;
   caption?: string;
   captionPosition: ProjectMediaCaptionPosition;
+  placement: ProjectMediaPlacement;
   aspectRatio: string;
   aspectRatioLabel: ProjectMediaAspectRatioSetting;
   orientation: ProjectMediaOrientation;
@@ -204,11 +206,31 @@ function optionalProjectLayout(value: unknown, file: string): ProjectLayout {
   if (value === undefined || value === null || value === "") return "carousel";
 
   const layout = requiredString(value, "layout", file).toLowerCase();
-  if (layout !== "carousel") {
-    throw new Error(`layout must be carousel in ${file}.`);
+  if (layout !== "carousel" && layout !== "split-stack") {
+    throw new Error(`layout must be carousel or split-stack in ${file}.`);
   }
 
   return layout;
+}
+
+function optionalMediaPlacement(
+  value: unknown,
+  field: string,
+  file: string,
+): ProjectMediaPlacement {
+  if (value === undefined || value === null || value === "") return "full";
+
+  const placement = requiredString(value, field, file).toLowerCase();
+  if (
+    placement !== "full" &&
+    placement !== "left" &&
+    placement !== "center" &&
+    placement !== "right"
+  ) {
+    throw new Error(`${field} must be full, left, center, or right in ${file}.`);
+  }
+
+  return placement;
 }
 
 function requiredMediaType(
@@ -480,6 +502,11 @@ async function parseProjectMedia(
         captionPosition: optionalCaptionPosition(
           entry.captionPosition,
           `${field}.captionPosition`,
+          file,
+        ),
+        placement: optionalMediaPlacement(
+          entry.placement,
+          `${field}.placement`,
           file,
         ),
         aspectRatio: aspectRatio.cssValue,

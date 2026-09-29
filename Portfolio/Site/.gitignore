@@ -7,3 +7,4 @@ public/content
 .content-backups
 .studio-write.lock
 .stop-request
+.local-launcher.json

@@ -6,33 +6,39 @@ The repository has one shared content folder and two local applications:
 Portfolio Rebuild/
 ├── Portfolio/
 │   ├── Launch Portfolio.cmd  # Double-click to test just the site
+│   ├── Launch Portfolio.command  # macOS equivalent
 │   ├── Stop Portfolio.cmd    # Stop the local site server
+│   ├── Stop Portfolio.command    # macOS equivalent
 │   ├── Content/   # Homepage/project Markdown and original media
 │   ├── Site/      # Public portfolio and static GitHub Pages build
 │   └── Assets/    # Supplied reference/source assets
 └── Studio/
     ├── Launch Studio.cmd  # Double-click to launch the local editor
-    ├── Stop Studio.cmd    # Stop Studio and its preview
+    ├── Launch Studio.command  # macOS equivalent
+    ├── Stop Studio.cmd    # Stop the local editor
+    ├── Stop Studio.command    # macOS equivalent
     ├── README.md          # Short guide to this folder
     └── app/               # Studio code, dependencies, and backups
 ```
 
 ## Run locally
 
-Install Node.js 24 LTS. On Windows, double-click `Studio/Launch Studio.cmd`.
-The launcher installs missing project dependencies, starts Studio at
-**http://localhost:3001/** and the portfolio preview at
-**http://localhost:3000/**, and opens Studio in your browser. Keep its terminal
-window open while editing; press Ctrl+C to stop both servers.
-You can also double-click `Studio/Stop Studio.cmd` to stop both.
+Install Node.js 24 LTS. On Windows, double-click `Studio/Launch Studio.cmd`; on
+macOS, double-click `Studio/Launch Studio.command`.
+The launcher installs missing Studio dependencies, starts Studio at
+**http://localhost:3001/**, and opens it in your browser. Keep its terminal
+window open while editing; press Ctrl+C to stop Studio. You can also
+double-click the matching `Stop Studio` file.
 
-To test only the portfolio, double-click `Portfolio/Launch Portfolio.cmd`.
+To test only the portfolio, double-click `Portfolio/Launch Portfolio.cmd` on
+Windows or `Portfolio/Launch Portfolio.command` on macOS.
 It opens the site at **http://localhost:3000/** without starting Studio. Keep
-its terminal window open; press Ctrl+C to stop it. If Studio is already running,
-the site is already available at **http://localhost:3000/**; close Studio before
-using the site-only launcher on port 3000.
-Double-click `Portfolio/Stop Portfolio.cmd` to stop the portfolio. If Studio's
-launcher started both apps, either stop command stops both together.
+its terminal window open; press Ctrl+C to stop it. Double-click the matching
+`Stop Portfolio` file to stop the portfolio.
+
+Studio and the portfolio are independent and can run at the same time. To edit
+while viewing the site, launch both: Studio stays on port 3001 and the portfolio
+stays on port 3000. Each Stop command stops only its matching application.
 
 Alternatively, run `npm ci` in both `Studio/app/` and `Portfolio/Site/`, then run
 `npm run dev` in `Studio/app/` and `npm run dev` in the Site folder.

@@ -3,6 +3,8 @@ import type { HomeContent, Project } from "@/lib/content";
 import { ProjectCarousel } from "./ProjectCarousel";
 import { ProjectHeader } from "./ProjectHeader";
 import { ProjectNavigation } from "./ProjectNavigation";
+import { ProjectSplitStack } from "./ProjectSplitStack";
+import { PageRootColors } from "@/components/PageRootColors";
 import { ViewportMarks } from "@/components/ViewportMarks";
 import { SiteIntro } from "@/components/SiteIntro";
 
@@ -49,10 +51,23 @@ export function ProjectPageView({
       className="project-page"
       style={pageColorStyle}
     >
-      <div className="project-page-shell">
+      <PageRootColors
+        asterisk={colors.asterisk}
+        background={colors.background}
+        cropMarks={colors.cropMarks}
+        foreground={colors.foreground}
+      />
+      <div className="project-page-shell" data-project-layout={project.layout}>
         <ViewportMarks className="page-viewport-marks" />
         <ProjectHeader home={home} project={project} />
-        <ProjectCarousel media={project.content} projectTitle={project.title} />
+        {project.layout === "split-stack" ? (
+          <ProjectSplitStack
+            media={project.content}
+            projectTitle={project.title}
+          />
+        ) : (
+          <ProjectCarousel media={project.content} projectTitle={project.title} />
+        )}
         <ProjectNavigation
           nextProject={nextProject}
           previousProject={previousProject}
