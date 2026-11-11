@@ -235,7 +235,6 @@ export function ProjectCarousel({
             <figure
               className="project-media-item"
               data-aspect-ratio={item.aspectRatioLabel}
-              data-caption-position={item.captionPosition}
               data-has-caption={hasCaption || undefined}
               data-intrinsic-ready={intrinsicVideoRatio ? true : undefined}
               data-orientation={

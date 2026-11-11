@@ -729,6 +729,7 @@ button {
 }
 
 .project-carousel {
+  --project-carousel-media-height: 60dvh;
   display: flex;
   overflow-x: auto;
   overflow-y: hidden;
@@ -748,19 +749,20 @@ button {
 .project-carousel-track {
   display: flex;
   width: max-content;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--spacing-sm);
   padding-block: var(--spacing-m);
 }
 
 .project-media-item {
-  --project-short-side: 60dvh;
   position: relative;
-  display: block;
+  display: flex;
   width: max-content;
   margin: 0;
   padding-block: var(--spacing-xxl);
   flex: 0 0 auto;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
   scroll-snap-align: start;
 }
 
@@ -768,7 +770,7 @@ button {
   position: relative;
   overflow: hidden;
   width: auto;
-  height: var(--project-short-side);
+  height: var(--project-carousel-media-height);
   aspect-ratio: var(--project-aspect-ratio);
   flex: 0 0 auto;
   background: #b5b5b5;
@@ -868,14 +870,123 @@ button {
   justify-self: end;
 }
 
-.project-media-caption {
+.project-lightbox-trigger {
   position: absolute;
-  top: calc(100% - var(--spacing-xxl) + var(--spacing-l));
-  left: 0;
-  z-index: 1;
+  z-index: 3;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: zoom-in;
+}
+
+.project-lightbox-trigger:focus-visible {
+  outline: 2px solid var(--page-foreground);
+  outline-offset: -6px;
+}
+
+.project-lightbox {
+  --page-crop-marks: #050505;
+  --lightbox-peek-width: min(100px, calc((100vw - 124px) / 2));
+  --lightbox-media-height: min(
+    60dvh,
+    calc((100vw - var(--lightbox-peek-width) * 2 - 24px) / var(--lightbox-max-aspect-ratio))
+  );
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: #fff;
+  color: #050505;
+}
+
+.project-lightbox[open] {
   display: flex;
-  width: var(--project-short-side);
-  max-width: 100%;
+  flex-direction: column;
+}
+
+.project-lightbox::backdrop {
+  background: #fff;
+}
+
+.project-lightbox-strip {
+  position: relative;
+  display: flex;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  align-items: center;
+  outline: none;
+  scrollbar-width: none;
+  overscroll-behavior-inline: contain;
+}
+
+.project-lightbox-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.project-lightbox-track {
+  display: flex;
+  width: max-content;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--lightbox-gap, 12px);
+  padding-inline: 50vw;
+}
+
+.project-lightbox-slide {
+  position: relative;
+  overflow: hidden;
+  height: var(--lightbox-media-height);
+  width: max(var(--lightbox-peek-width), calc(var(--lightbox-media-height) * var(--lightbox-aspect-ratio)));
+  flex: 0 0 auto;
+}
+
+.project-lightbox-select {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.project-lightbox-select:focus-visible {
+  outline: 2px solid #050505;
+  outline-offset: -6px;
+}
+
+.project-lightbox-close {
+  position: absolute;
+  z-index: 95;
+  bottom: calc(var(--spacing-l) + 10px + var(--spacing-sm));
+  left: 50%;
+  min-height: 44px;
+  border: 0;
+  padding: 0 var(--spacing-sm);
+  background: transparent;
+  transform: translate(-50%, 12px);
+  font-family: var(--font-mono-display);
+  font-size: var(--type-mono-size);
+  line-height: var(--type-mono-leading);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.project-lightbox-close:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: 4px;
+}
+
+.project-media-caption {
+  display: flex;
+  width: var(--project-carousel-media-height);
+  padding-inline-end: calc(var(--project-carousel-media-height) / 3);
+  flex: 0 0 auto;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--spacing-sm);

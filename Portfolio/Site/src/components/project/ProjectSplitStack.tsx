@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { ProjectMedia } from "@/lib/content";
 import { ProjectDecodingCaption } from "./ProjectDecodingCaption";
+import { ProjectLightbox } from "./ProjectLightbox";
 
 type ProjectMediaStyle = CSSProperties & {
   "--project-aspect-ratio": string;
@@ -58,6 +59,7 @@ export function ProjectSplitStack({
   projectTitle: string;
 }) {
   const itemRefs = useRef<Array<HTMLElement | null>>([]);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const captionedIndexes = useMemo(
     () =>
       media.flatMap((item, index) => (hasCaption(item) ? [index] : [])),
@@ -167,10 +169,25 @@ export function ProjectSplitStack({
                   src={item.src}
                 />
               )}
+              <button
+                aria-haspopup="dialog"
+                aria-label={`Enlarge ${item.alt}`}
+                className="project-lightbox-trigger"
+                onClick={() => setLightboxIndex(index)}
+                type="button"
+              />
             </div>
           </figure>
         );
       })}
+      {lightboxIndex !== null ? (
+        <ProjectLightbox
+          activeIndex={lightboxIndex}
+          media={media}
+          onClose={() => setLightboxIndex(null)}
+          projectTitle={projectTitle}
+        />
+      ) : null}
     </section>
   );
 }
