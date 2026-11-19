@@ -62,11 +62,11 @@ export function ProjectPageView({
         <ProjectHeader home={home} project={project} />
         {project.layout === "split-stack" ? (
           <ProjectSplitStack
-            media={project.content}
+            blocks={project.content}
             projectTitle={project.title}
           />
         ) : (
-          <ProjectCarousel media={project.content} projectTitle={project.title} />
+          <ProjectCarousel blocks={project.content} projectTitle={project.title} />
         )}
         <ProjectNavigation
           nextProject={nextProject}

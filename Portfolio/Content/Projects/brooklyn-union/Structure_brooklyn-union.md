@@ -20,6 +20,14 @@ content:
     alt: ''
     aspectRatio: Default
     captionPosition: bottom
+    captionLabel: 01 –
+    caption: >-
+      Brooklyn Union draws on lettering from the elevated railcars preserved
+      at the New York Transit Museum. The narrow band between the roofline and
+      windows gave the original letters their low, wide proportions. Those
+      proportions, along with contrasting stroke weights and flared serifs,
+      define an alphabet that brings the original lettering into new transit
+      settings.
   - type: image
     src: ./Images/TrainExterior_Crop1x1_Sep23-393d7f38.jpg
     alt: ''

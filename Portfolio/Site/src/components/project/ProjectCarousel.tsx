@@ -1,14 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   CSSProperties,
   KeyboardEvent,
   WheelEvent,
 } from "react";
-import type { ProjectMedia } from "@/lib/content";
+import type { ProjectBlock, ProjectMedia } from "@/lib/content";
 import { ProjectDecodingCaption } from "./ProjectDecodingCaption";
+import { useSyncedVideoStart } from "./useSyncedVideoStart";
 
 type ProjectMediaStyle = CSSProperties & {
   "--project-aspect-ratio": string;
@@ -64,13 +65,14 @@ function ProjectVideo({
   return (
     <video
       aria-label={item.alt}
-      autoPlay
+      autoPlay={!item.syncGroup}
       className="project-media-video"
+      data-sync-group={item.syncGroup}
       loop
       muted
       playsInline
       poster={item.poster}
-      preload={index < 2 ? "auto" : "metadata"}
+      preload={item.syncGroup || index < 2 ? "auto" : "metadata"}
       ref={videoRef}
       src={item.src}
     />
@@ -78,10 +80,10 @@ function ProjectVideo({
 }
 
 export function ProjectCarousel({
-  media,
+  blocks,
   projectTitle,
 }: {
-  media: ProjectMedia[];
+  blocks: ProjectBlock[];
   projectTitle: string;
 }) {
   const carouselRef = useRef<HTMLElement>(null);
@@ -90,6 +92,8 @@ export function ProjectCarousel({
   const [intrinsicVideoRatios, setIntrinsicVideoRatios] = useState<
     Record<string, IntrinsicVideoRatio>
   >({});
+  const media = useMemo(() => blocks.filter((item) => item.type !== "caption"), [blocks]);
+  useSyncedVideoStart(carouselRef, media);
 
   const handleVideoMetadata = useCallback(
     (source: string, width: number, height: number) => {
@@ -150,6 +154,11 @@ export function ProjectCarousel({
     const carousel = event.currentTarget;
     if (carousel.scrollWidth <= carousel.clientWidth) return;
 
+    if (Math.abs(event.deltaY) > Math.abs(event.deltaX) && event.target instanceof Element) {
+      const caption = event.target.closest(".project-media-caption");
+      if (caption && (event.deltaY < 0 ? caption.scrollTop > 0 : caption.scrollTop + caption.clientHeight < caption.scrollHeight - 1)) return;
+    }
+
     const wheelDelta =
       Math.abs(event.deltaX) > Math.abs(event.deltaY)
         ? event.deltaX
@@ -194,6 +203,7 @@ export function ProjectCarousel({
 
   function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    if (event.currentTarget.scrollWidth <= event.currentTarget.clientWidth) return;
 
     event.preventDefault();
     cancelWheelAnimation();
@@ -209,18 +219,27 @@ export function ProjectCarousel({
     });
   }
 
+  let nextMediaIndex = 0;
   return (
     <section
-      aria-label={`${projectTitle} project media`}
+      aria-label={`${projectTitle} project content`}
       className="project-carousel"
+      data-video-sync-scope
       onKeyDown={handleKeyDown}
       onWheel={handleWheel}
       ref={carouselRef}
       tabIndex={0}
     >
       <div className="project-carousel-track">
-        {media.map((item, index) => {
-          const hasCaption = Boolean(item.captionLabel || item.caption);
+        {blocks.map((item, index) => {
+          if (item.type === "caption") {
+            return (
+              <div className="project-carousel-caption-block" data-project-block="caption" key={`caption-${index}`}>
+                <ProjectDecodingCaption item={item} rootRef={carouselRef} />
+              </div>
+            );
+          }
+          const mediaIndex = nextMediaIndex++;
           const intrinsicVideoRatio =
             item.type === "video" && item.aspectRatioLabel === "Default"
               ? intrinsicVideoRatios[item.src]
@@ -228,14 +247,14 @@ export function ProjectCarousel({
           const mediaStyle: ProjectMediaStyle = {
             "--project-aspect-ratio":
               intrinsicVideoRatio?.aspectRatio ?? item.aspectRatio,
-            "--project-load-delay": `${index * 85}ms`,
+            "--project-load-delay": `${mediaIndex * 85}ms`,
           };
 
           return (
             <figure
               className="project-media-item"
               data-aspect-ratio={item.aspectRatioLabel}
-              data-has-caption={hasCaption || undefined}
+              data-project-block="media"
               data-intrinsic-ready={intrinsicVideoRatio ? true : undefined}
               data-orientation={
                 intrinsicVideoRatio?.orientation ?? item.orientation
@@ -249,25 +268,18 @@ export function ProjectCarousel({
                     alt={item.alt}
                     className="object-cover"
                     fill
-                    loading={index < 2 ? "eager" : "lazy"}
+                    loading={mediaIndex < 2 ? "eager" : "lazy"}
                     sizes="(max-width: 767px) 92vw, 800px"
                     src={item.src}
                   />
                 ) : (
                   <ProjectVideo
-                    index={index}
+                    index={mediaIndex}
                     item={item}
                     onIntrinsicRatio={handleVideoMetadata}
                   />
                 )}
               </div>
-
-              {hasCaption ? (
-                <ProjectDecodingCaption
-                  item={item}
-                  rootRef={carouselRef}
-                />
-              ) : null}
             </figure>
           );
         })}

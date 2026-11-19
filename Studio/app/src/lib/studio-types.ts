@@ -6,17 +6,19 @@ export const colorLabels = ["Background", "Text and rules", "Crop marks", "Aster
 
 export type MediaDraft = {
   type: "image" | "video";
+  id?: string;
   src: string;
   alt?: string;
+  hidden?: boolean;
   aspectRatio?: string;
-  captionLabel?: string;
-  caption?: string;
-  captionPosition?: string;
   placement?: string;
   display?: string;
   poster?: string;
+  syncGroup?: string;
   [key: string]: unknown;
 };
+export type CaptionDraft = { type: "caption"; id?: string; label?: string; text?: string; [key: string]: unknown };
+export type BlockDraft = MediaDraft | CaptionDraft;
 export type ProjectDraft = {
   title: string;
   slug: string;
@@ -28,12 +30,13 @@ export type ProjectDraft = {
   tags: string[];
   cover: string;
   coverAlt: string;
+  coverPoster?: string;
   customColors: boolean;
   backgroundColor: string;
   textStrokeColor: string;
   cropMarkColor: string;
   asteriskColor: string;
-  content: MediaDraft[];
+  content: BlockDraft[];
   [key: string]: unknown;
 };
 export type HomeDraft = {
@@ -52,4 +55,18 @@ export type StudioState = {
 };
 export function assetUrl(id: string, src: string) {
   return `/api/studio?project=${encodeURIComponent(id)}&asset=${encodeURIComponent(src)}`;
+}
+
+export function isVideoCover(src: string) {
+  return /\.(mp4|webm|mov)$/i.test(src);
+}
+
+export function projectAssetReferences(data: ProjectDraft, includeHidden = true) {
+  return [data.cover, data.coverPoster, ...data.content.flatMap((block) =>
+    block.type === "caption" || (!includeHidden && block.hidden) ? [] : [block.src, block.poster],
+  )].filter((src): src is string => Boolean(src));
+}
+
+export function assetReferenceKey(src: string) {
+  return src.replaceAll("\\", "/").toLowerCase();
 }

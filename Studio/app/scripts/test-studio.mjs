@@ -1,7 +1,7 @@
 // Integration checks against a running local dev server. Uses only disposable projects.
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { readFile, readdir, rm } from "node:fs/promises";
+import { readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import matter from "gray-matter";
@@ -47,28 +47,74 @@ try {
   const data = { ...project.data, layout: "split-stack", published: true, cover: asset.src, coverAlt: "A test image", tags: ["Test"],
     content: [ { type: "image", src: asset.src, alt: "First", aspectRatio: "Default", caption: "Multiline caption\nwith punctuation: # and quotes.", captionPosition: "top", placement: "right" },
       { type: "image", src: asset.src, alt: "Second", aspectRatio: "16:9", placement: "full" } ] };
-  project = await post({ action: "project", id: slug, revision: project.revision, data });
+  const projectFile = path.join(projectRoot, slug, project.filename);
+  await writeFile(projectFile, matter.stringify("\n# Legacy caption fixture\n", { ...data, published: false }));
+  const loaded = await (await fetch(`${base}/api/studio`)).json();
+  project = loaded.projects.find((entry) => entry.id === slug);
+  const [caption, first, second] = project.data.content;
+  assert.equal(caption.type, "caption");
+  assert.equal(caption.text, data.content[0].caption);
+  assert.equal(first.caption, undefined);
+  project = await post({ action: "project", id: slug, revision: project.revision, data: { published: true } });
   assert.notEqual(project.revision, draftRevision);
-  assert.equal((await fetch(`${previewBase}/${slug}`)).status, 200);
+  async function assertPageOrder(expected) {
+    const page = await fetch(`${previewBase}/${slug}`);
+    assert.equal(page.status, 200);
+    const html = await page.text();
+    assert.deepEqual([...html.matchAll(/data-project-block="(caption|media)"/g)].map((match) => match[1]), expected);
+  }
+  await assertPageOrder(["caption", "media", "media"]);
   assert.equal((await fetch(`${previewBase}/content/projects/${slug}/${path.basename(asset.src)}`)).status, 200);
   await post({ action: "project", id: slug, revision: draftRevision, data }, 409);
   await post({ action: "project", id: slug, revision: project.revision, data: { ...data, gridSize: "XL" } }, 400);
   await post({ action: "project", id: slug, revision: project.revision, data: { ...data, content: [{ ...data.content[0], placement: "outside" }] } }, 400);
-  project = await post({ action: "project", id: slug, revision: project.revision, data: { ...project.data, content: [...project.data.content].reverse() } });
-  const onDisk = matter(await readFile(path.join(projectRoot, slug, project.filename), "utf8"));
+  await post({ action: "project", id: slug, revision: project.revision, data: { content: [{ type: "caption", text: " " }] } }, 400);
+  project = await post({ action: "project", id: slug, revision: project.revision, data: { layout: "carousel", content: [second, caption, first] } });
+  await assertPageOrder(["media", "caption", "media"]);
+  const libraryUpload = new FormData();
+  libraryUpload.set("project", slug);
+  libraryUpload.set("file", new File([png], "library.png", { type: "image/png" }));
+  const libraryAsset = await post(libraryUpload);
+  const afterUpload = (await (await fetch(`${base}/api/studio`)).json()).projects.find((entry) => entry.id === slug);
+  assert.equal(afterUpload.revision, project.revision);
+  assert.ok(afterUpload.assets.some((entry) => entry.src === libraryAsset.src));
+  assert.ok(!afterUpload.data.content.some((entry) => entry.src === libraryAsset.src));
+  const libraryBlock = { type: "image", src: libraryAsset.src, alt: "Library fixture" };
+  const removeLibrary = { action: "remove-library-asset", id: slug, src: libraryAsset.src };
+  project = await post({ action: "project", id: slug, revision: project.revision, data: { content: [caption, { ...libraryBlock, hidden: true }] } });
+  await assertPageOrder(["caption"]);
+  assert.equal((await fetch(`${previewBase}/content/projects/${slug}/${libraryAsset.name}`)).status, 404);
+  await post(removeLibrary, 409);
+  project = await post({ action: "project", id: slug, revision: project.revision, data: { content: [caption, libraryBlock] } });
+  await assertPageOrder(["caption", "media"]);
+  project = await post({ action: "project", id: slug, revision: project.revision, data: { content: [caption] } });
+  assert.ok(project.assets.some((entry) => entry.src === libraryAsset.src));
+  await post({ ...removeLibrary, src: asset.src }, 409); // The original upload is still the cover.
+  await post(removeLibrary);
+  const afterRemoval = (await (await fetch(`${base}/api/studio`)).json()).projects.find((entry) => entry.id === slug);
+  assert.ok(!afterRemoval.assets.some((entry) => entry.src === libraryAsset.src));
+  await assert.rejects(readFile(path.join(projectRoot, slug, libraryAsset.src)), { code: "ENOENT" });
+  const backups = path.join(".content-backups", "media", slug);
+  const [backup] = await readdir(backups);
+  assert.deepEqual(await readFile(path.join(backups, backup, libraryAsset.name)), png);
+  project = await post({ action: "project", id: slug, revision: project.revision, data: { content: [second, caption, first] } });
+  const onDisk = matter(await readFile(projectFile, "utf8"));
   assert.equal(onDisk.data.content[0].alt, "Second");
-  assert.equal(onDisk.data.content[1].placement, "right");
-  assert.equal(onDisk.data.content[1].caption, data.content[0].caption);
+  assert.equal(onDisk.data.content[1].text, data.content[0].caption);
+  assert.equal(onDisk.data.content[2].placement, "right");
+  assert.equal(onDisk.data.content[2].caption, undefined);
+  project = await post({ action: "project", id: slug, revision: project.revision, data: { layout: "split-stack", content: [caption] } });
+  await assertPageOrder(["caption"]);
   assert.ok((await readdir(".content-backups")).some((name) => name.endsWith(project.filename)));
   const featured = state.projects.find((p) => p.data.slug === state.home.data.centerProject);
   await post({ action: "project", id: featured.id, revision: featured.revision, data: { ...featured.data, published: false } }, 400);
   await post({ action: "home", revision: state.home.revision, data: { ...state.home.data, centerProject: "missing-project" } }, 400);
   assert.equal(await readFile(homePath, "utf8"), beforeHome);
-  console.log("PASS: list, create draft, upload, media preview, publish, layout and placement controls, new route, sync assets, reorder, caption round-trip, backup, conflict detection, origin/path checks and featured-project protection.");
+  console.log("PASS: project editing, caption blocks, library upload/removal, protected references, media visibility, asset sync, and revision checks.");
 } finally {
   if (created) {
     // Only these unique fixture directories created by this run may be removed.
-    for (const parent of [projectRoot, path.resolve("..", "..", "Portfolio", "Site", "public", "content", "projects")]) {
+    for (const parent of [projectRoot, path.resolve("..", "..", "Portfolio", "Site", "public", "content", "projects"), path.resolve(".content-backups", "media")]) {
       const target = path.resolve(parent, slug);
       assert.equal(path.dirname(target), parent);
       assert.ok(path.basename(target).startsWith("studio-test-"));

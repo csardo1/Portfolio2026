@@ -1,11 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { Project } from "@/lib/content";
 import { AsteriskLabel } from "@/components/AsteriskLabel";
+import { ProjectCover } from "./ProjectCover";
 
 const indexAnimationResetDelay = 500;
 const indexWaveWidths = [
@@ -104,7 +104,7 @@ export function IndexView({ projects }: { projects: Project[] }) {
 
   return (
     <section
-      className="home-view index-view relative flex min-h-0 w-full flex-1 items-center overflow-hidden"
+      className="home-view index-view relative flex min-h-0 w-full flex-1 items-center overflow-clip"
       aria-label="Project index"
       onMouseLeave={scheduleAnimationReset}
     >
@@ -166,12 +166,10 @@ export function IndexView({ projects }: { projects: Project[] }) {
                   >
                     <span className="index-preview-media relative block aspect-square w-full overflow-hidden bg-[#d3d3d3]">
                       {isActive ? (
-                        <Image
+                        <ProjectCover
                           alt=""
-                          className="object-cover"
-                          fill
+                          project={project}
                           sizes="(max-width: 767px) 62vw, 400px"
-                          src={project.coverUrl}
                         />
                       ) : null}
                     </span>

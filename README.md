@@ -83,15 +83,28 @@ Studio is a local content editor that saves directly to the existing Markdown
 files in `Portfolio/Content/`. It is separate from the public site. No account,
 database, or system-wide Studio installation is needed.
 
-- **Projects:** browse or search your projects, then select one to edit.
+- **Projects:** browse or search your projects, then select one to edit. In the
+  sidebar, sort by portfolio order, title, or year. Choose Manual order to drag
+  projects or move them with the arrows. Sidebar preferences are saved in your
+  browser and apply to Studio only.
 - **New project:** enter a title and URL to create a draft folder and
   `Structure_ProjectName.md` file. Upload a cover, write its description, add
   media, then enable Published and save.
 - **Project details:** edit title, URL, year, tags, homepage order, L/M/S grid
   size, layout, and publication status. Changing a URL does not rename the folder.
-- **Project media:** upload images/videos or choose files already in the Images
-  folder. Use up/down arrows to set the sequence. Each item has an aspect ratio,
-  description, caption label, caption text and position; videos can also use a poster.
+- **Homepage cover:** choose an image, GIF, or video. Grid and Index show the
+  first frame while motion loads, if playback fails, or when reduced motion is
+  enabled. Studio captures the first frame when saving a video cover. When
+  editing Markdown directly, set `coverPoster` to a still of the video's first
+  frame in `./Images/`. GIF stills are generated automatically.
+- **Media library:** upload files to the selected project, then use Add to page
+  when you want them in the sequence. Remove files from the library after saving
+  any changes that remove their page, cover, or poster references. Studio moves
+  removed originals to `Studio/app/.content-backups/media/`.
+- **Project page:** add captions or media from the library. Drag a block by its
+  handle or use the up/down buttons to set the order. Hide keeps a media block
+  in place for later. Remove takes the block out of the sequence and keeps the
+  file in the library. Videos can use a poster or a synced partner.
 - **Homepage:** edit introduction, navigation labels, default view, featured
   project, homepage colors, and global project colors.
 - **Project colors:** enable custom colors to override the homepage defaults.
@@ -134,7 +147,11 @@ The checks create and remove their own disposable test project.
 - Update project titles, tags, covers, `homeOrder`, and `gridSize` in each `Portfolio/Content/Projects/*/Structure_ProjectName.md` file.
 - Set `gridSize` to `L`, `M`, or `S` for the large, medium, or small Grid tile.
 - Set `centerProject` in `Portfolio/Content/HomePage/Structure_HomePage.md` to the slug that should occupy the central Grid position.
-- The ordered `content` list in each project file controls media and captions on project pages.
+- The ordered `content` list accepts `image` and `video` entries with a `src`, and
+  `caption` entries with `text` and an optional `label`. The carousel presents
+  blocks left to right. On wide split-stack pages, captions change in the left
+  rail at their position in the sequence. Narrow pages show them in the stack.
+  Studio converts embedded captions into independent blocks when a project is saved.
 
 ## Spacing tokens
 

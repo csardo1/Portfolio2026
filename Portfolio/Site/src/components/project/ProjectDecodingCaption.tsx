@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
-import type { ProjectMedia } from "@/lib/content";
+import type { ProjectCaption } from "@/lib/content";
 
 const captionDecodeUppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const captionDecodeLowercase = "abcdefghijklmnopqrstuvwxyz";
@@ -67,23 +67,18 @@ function DecodingText({
 
   return (
     <span className="caption-decode-text">
-      <span aria-hidden="true" className="caption-decode-text-reserve">
-        {text}
-      </span>
-      <span aria-hidden="true" className="caption-decode-text-visible">
-        {cursorVisible ? textBeforeCursor : displayedText}
-        {cursorVisible ? (
-          <span className="caption-decode-cursor-anchor">
-            <span
-              aria-hidden="true"
-              className="asterisk-marker caption-decode-cursor"
-            >
-              *
-            </span>
+      {cursorVisible ? textBeforeCursor : displayedText}
+      {cursorVisible ? (
+        <span className="caption-decode-cursor-anchor">
+          <span
+            aria-hidden="true"
+            className="asterisk-marker caption-decode-cursor"
+          >
+            *
           </span>
-        ) : null}
-        {cursorVisible ? textAfterCursor : null}
-      </span>
+        </span>
+      ) : null}
+      {cursorVisible ? textAfterCursor : null}
     </span>
   );
 }
@@ -95,20 +90,20 @@ export function ProjectDecodingCaption({
   semantic = true,
 }: {
   className?: string;
-  item: ProjectMedia;
+  item: ProjectCaption;
   rootRef?: RefObject<HTMLElement | null>;
   semantic?: boolean;
 }) {
-  const captionRef = useRef<HTMLElement>(null);
+  const captionRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   const animationDelayTimeoutRef = useRef<number | null>(null);
   const completionTimeoutRef = useRef<number | null>(null);
   const previousCaptionRef = useRef({
-    body: item.caption ?? "",
-    label: item.captionLabel ?? "",
+    body: item.text ?? "",
+    label: item.label ?? "",
   });
-  const label = item.captionLabel ?? "";
-  const body = item.caption ?? "";
+  const label = item.label ?? "";
+  const body = item.text ?? "";
   const initialSeparatorLength = label && body ? 1 : 0;
   const [decodeState, setDecodeState] = useState({
     complete: false,
@@ -226,6 +221,8 @@ export function ProjectDecodingCaption({
     const isInitialCaption =
       previousCaption.label === label && previousCaption.body === body;
     const transitionSource = isInitialCaption ? null : previousCaption;
+    if (transitionSource) caption.scrollTop = 0;
+
     const labelCharacters = Math.max(
       label.length,
       transitionSource?.label.length ?? 0,
@@ -321,7 +318,6 @@ export function ProjectDecodingCaption({
       decodeState.resolvedCharacters <= transitionShape.labelCharacters) ||
       (decodeState.complete && !body));
   const cursorIsInBody = Boolean(body) && !cursorIsInLabel;
-  const accessibleCaption = [label, body].filter(Boolean).join(" ");
   const captionContent = (
     <>
       {label ? (
@@ -349,27 +345,15 @@ export function ProjectDecodingCaption({
     </>
   );
 
-  if (!semantic) {
-    return (
-      <div
-        aria-hidden="true"
-        className={className}
-        data-decoding={!decodeState.complete || undefined}
-        ref={captionRef as RefObject<HTMLDivElement | null>}
-      >
-        {captionContent}
-      </div>
-    );
-  }
-
   return (
-    <figcaption
-      aria-label={accessibleCaption}
+    <div
+      aria-hidden={semantic ? undefined : true}
       className={className}
       data-decoding={!decodeState.complete || undefined}
       ref={captionRef}
     >
+      {semantic && <span className="sr-only">{[label, body].filter(Boolean).join(" ")}</span>}
       {captionContent}
-    </figcaption>
+    </div>
   );
 }

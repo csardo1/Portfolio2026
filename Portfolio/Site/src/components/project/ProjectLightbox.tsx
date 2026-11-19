@@ -5,6 +5,35 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { ProjectMedia } from "@/lib/content";
 import { ViewportMarks } from "@/components/ViewportMarks";
+import { useSyncedVideoStart } from "./useSyncedVideoStart";
+
+type SlidePosition = {
+  scrollLeft: number;
+  extraGap: number;
+};
+
+function applySpacing(strip: HTMLElement, positions: SlidePosition[]) {
+  if (positions.length === 0) return 0;
+
+  const scrollLeft = strip.scrollLeft;
+  const next = positions.findIndex((position) => position.scrollLeft >= scrollLeft);
+  const endIndex = next === -1 ? positions.length - 1 : next;
+  const startIndex = next <= 0 ? endIndex : next - 1;
+  const start = positions[startIndex];
+  const end = positions[endIndex];
+  const progress = startIndex === endIndex
+    ? 0
+    : (scrollLeft - start.scrollLeft) / (end.scrollLeft - start.scrollLeft);
+  const eased = progress * progress * (3 - 2 * progress);
+
+  // The track keeps fixed scroll targets. Only the visible spacing changes.
+  strip.style.setProperty("--lightbox-position", String(startIndex + progress));
+  strip.style.setProperty(
+    "--lightbox-gap-extra",
+    `${start.extraGap + (end.extraGap - start.extraGap) * eased}px`,
+  );
+  return progress < 0.5 ? startIndex : endIndex;
+}
 
 export function ProjectLightbox({ media, activeIndex, projectTitle, onClose }: {
   media: ProjectMedia[];
@@ -14,6 +43,7 @@ export function ProjectLightbox({ media, activeIndex, projectTitle, onClose }: {
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const stripRef = useRef<HTMLElement>(null);
+  const positionsRef = useRef<SlidePosition[]>([]);
   const currentIndexRef = useRef(activeIndex);
   const animationRef = useRef<number | null>(null);
   const [currentIndex, setCurrentIndex] = useState(activeIndex);
@@ -26,28 +56,19 @@ export function ProjectLightbox({ media, activeIndex, projectTitle, onClose }: {
 
   const centerOn = useCallback((index: number, behavior: ScrollBehavior) => {
     const strip = stripRef.current;
-    const item = strip?.querySelectorAll<HTMLElement>(".project-lightbox-slide")[index];
-    if (!strip || !item) return;
+    const positions = positionsRef.current;
+    const target = positions[index]?.scrollLeft;
+    if (!strip || target === undefined) return;
     if (animationRef.current !== null) {
       cancelAnimationFrame(animationRef.current);
       animationRef.current = null;
     }
-    const anchor = strip.querySelectorAll<HTMLElement>(".project-lightbox-slide")[currentIndexRef.current];
-    const anchorLeft = anchor.getBoundingClientRect().left;
-    const peek = Math.min(100, (strip.clientWidth - 124) / 2);
-    const gap = Math.max(12, (strip.clientWidth - item.offsetWidth) / 2 - peek);
-    strip.style.setProperty("--lightbox-gap", `${gap}px`);
-    // Preserve the current image's position while updating the spacing.
-    const anchorShift = anchor.getBoundingClientRect().left - anchorLeft;
-    if (Math.abs(anchorShift) > 0.5) strip.scrollLeft += anchorShift;
     const start = strip.scrollLeft;
-    const target = start + item.getBoundingClientRect().left -
-      strip.getBoundingClientRect().left + item.offsetWidth / 2 - strip.clientWidth / 2;
     currentIndexRef.current = index;
     setCurrentIndex(index);
-    if (Math.abs(target - start) <= 1) return;
-    if (behavior !== "smooth") {
-      strip.scrollLeft = target;
+    if (behavior !== "smooth" || target === start) {
+      if (target !== start) strip.scrollLeft = target;
+      applySpacing(strip, positions);
       return;
     }
 
@@ -59,6 +80,7 @@ export function ProjectLightbox({ media, activeIndex, projectTitle, onClose }: {
         ? 4 * progress ** 3
         : 1 - (-2 * progress + 2) ** 3 / 2;
       strip.scrollLeft = start + (target - start) * eased;
+      applySpacing(strip, positions);
       animationRef.current = progress < 1 ? requestAnimationFrame(animate) : null;
     }
     animationRef.current = requestAnimationFrame(animate);
@@ -74,17 +96,36 @@ export function ProjectLightbox({ media, activeIndex, projectTitle, onClose }: {
   useEffect(() => {
     const dialog = dialogRef.current;
     const strip = stripRef.current;
-    if (!dialog || !strip) return;
+    const track = strip?.querySelector<HTMLElement>(".project-lightbox-track");
+    if (!dialog || !strip || !track) return;
     const previousOverflow = document.body.style.overflow;
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     dialog.showModal();
     strip.focus({ preventScroll: true });
     document.body.style.overflow = "hidden";
-    centerOn(activeIndex, "instant");
+    const slides = Array.from(track.querySelectorAll<HTMLElement>(".project-lightbox-slide"));
+    const layout = () => {
+      const width = strip.clientWidth;
+      const peek = Math.min(100, (width - 124) / 2);
+      const trackStyle = getComputedStyle(track);
+      const baseGap = Number.parseFloat(trackStyle.columnGap);
+      let left = Number.parseFloat(trackStyle.paddingInlineStart);
+      positionsRef.current = slides.map((slide) => {
+        const slideWidth = slide.getBoundingClientRect().width;
+        const scrollLeft = Math.round(left + (slideWidth - width) / 2);
+        left += slideWidth + baseGap;
+        return {
+          scrollLeft,
+          extraGap: Math.max(0, (width - slideWidth) / 2 - peek - baseGap),
+        };
+      });
+      centerOn(currentIndexRef.current, "instant");
+    };
+    layout();
 
-    const observer = new ResizeObserver(() => centerOn(currentIndexRef.current, "instant"));
+    const observer = new ResizeObserver(layout);
     observer.observe(strip);
-    strip.querySelectorAll(".project-lightbox-slide").forEach((item) => observer.observe(item));
+    slides.forEach((slide) => observer.observe(slide));
     const settle = () => {
       if (animationRef.current !== null) return;
       centerOn(currentIndexRef.current,
@@ -101,10 +142,13 @@ export function ProjectLightbox({ media, activeIndex, projectTitle, onClose }: {
     };
   }, [activeIndex, centerOn]);
 
+  useSyncedVideoStart(dialogRef, media);
+
   return (
     <dialog
       aria-label={`${projectTitle} media viewer`}
       className="project-lightbox"
+      data-video-sync-scope
       style={{ "--lightbox-max-aspect-ratio": maximumAspectRatio } as CSSProperties}
       onCancel={(event) => { event.preventDefault(); onClose(); }}
       onKeyDown={(event) => {
@@ -144,14 +188,7 @@ export function ProjectLightbox({ media, activeIndex, projectTitle, onClose }: {
           if (animationRef.current !== null) return;
           const strip = stripRef.current;
           if (!strip) return;
-          const center = strip.getBoundingClientRect().left + strip.clientWidth / 2;
-          let nearest = 0;
-          let distance = Infinity;
-          strip.querySelectorAll<HTMLElement>(".project-lightbox-slide").forEach((item, index) => {
-            const rect = item.getBoundingClientRect();
-            const offset = Math.abs(rect.left + rect.width / 2 - center);
-            if (offset < distance) { nearest = index; distance = offset; }
-          });
+          const nearest = applySpacing(strip, positionsRef.current);
           currentIndexRef.current = nearest;
           setCurrentIndex(nearest);
         }}
@@ -163,16 +200,20 @@ export function ProjectLightbox({ media, activeIndex, projectTitle, onClose }: {
             <div
               className="project-lightbox-slide"
               key={`${item.src}-${index}`}
-              style={{ "--lightbox-aspect-ratio": videoRatios[item.src] ?? item.aspectRatio } as CSSProperties}
+              style={{
+                "--lightbox-aspect-ratio": videoRatios[item.src] ?? item.aspectRatio,
+                "--lightbox-slide-index": index,
+              } as CSSProperties}
             >
               {item.type === "image" ? (
                 <Image alt={item.alt} className="object-cover" fill sizes="100vw" src={item.src} />
               ) : (
                 <video
                   aria-label={item.alt}
-                  autoPlay
+                  autoPlay={!item.syncGroup}
                   className="project-media-video"
                   controls={currentIndex === index}
+                  data-sync-group={item.syncGroup}
                   loop muted playsInline
                   onLoadedMetadata={(event) => {
                     const video = event.currentTarget;
@@ -181,7 +222,7 @@ export function ProjectLightbox({ media, activeIndex, projectTitle, onClose }: {
                     }
                   }}
                   poster={item.poster}
-                  preload="metadata"
+                  preload={item.syncGroup ? "auto" : "metadata"}
                   src={item.src}
                 />
               )}

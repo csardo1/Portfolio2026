@@ -1,5 +1,5 @@
 import { revalidatePath } from "next/cache";
-import { allowStudio, createProject, readAsset, readStudio, saveHome, saveProject, StudioError, uploadAsset, withStudioWrite } from "@/lib/studio";
+import { allowStudio, createProject, readAsset, readStudio, removeLibraryAsset, saveHome, saveProject, StudioError, uploadAsset, withStudioWrite } from "@/lib/studio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,12 +29,15 @@ export async function POST(request: Request) {
       const form = await request.formData();
       const file = form.get("file");
       if (!(file instanceof File)) throw new StudioError("Choose a file to upload.");
-      return Response.json(await withStudioWrite(() => uploadAsset(String(form.get("project") ?? ""), file)));
+      const type = form.get("type");
+      const expectedType = type === "image" || type === "video" ? type : undefined;
+      return Response.json(await withStudioWrite(() => uploadAsset(String(form.get("project") ?? ""), file, expectedType)));
     }
     const body = await request.json();
     if (!body || typeof body !== "object") throw new StudioError("Invalid request.");
     const result = await withStudioWrite(async () => {
       if (body.action === "create") return createProject(body.title, body.slug);
+      if (body.action === "remove-library-asset" && typeof body.id === "string" && typeof body.src === "string") return removeLibraryAsset(body.id, body.src);
       if (body.action === "project" && typeof body.id === "string" && typeof body.revision === "string" && body.data && typeof body.data === "object") return saveProject(body.id, body.revision, body.data);
       if (body.action === "home" && typeof body.revision === "string" && body.data && typeof body.data === "object") return saveHome(body.revision, body.data);
       throw new StudioError("Unknown Studio action.");

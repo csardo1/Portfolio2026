@@ -1,5 +1,5 @@
 ---
-title: Wiff — Editorial
+title: Wiff Vertical
 slug: wiff-editorial
 year: 2026
 layout: split-stack
@@ -16,7 +16,7 @@ homeOrder: 8
 gridSize: L
 cover: ./Images/CoverStatic.png
 coverAlt: Soft-focus blue and gray Wiff wordmark artwork
-published: true
+published: false
 content:
   - type: image
     src: ./Images/JvRYh3dUjx8QfNcPF33LtXcb4.jpg
@@ -24,15 +24,14 @@ content:
     placement: full
     alt: Wiff perfume bottles arranged in a soft-focus studio scene
     display: landscape
-    captionLabel: 01 –
     captionPosition: bottom
+    captionLabel: 01 –
     caption: >-
-      Wiff is a fragrance line that turns the fleeting world of internet
-      aesthetics into scents you can hold onto. Online aesthetics are often
-      short-lived, tied to our desires for escape—either to a dreamy past or an
-      imagined future. By translating these ephemeral visuals into tangible
-      fragrances, Wiff invites you to connect emotionally and personally with
-      digital trends that might otherwise disappear.
+      Wiff is a fragrance collection inspired by internet aesthetics such as
+      cottagecore, dark academia, and Y2K. The communities around these styles
+      use images to imagine places and periods they may never have known. By
+      translating those images into scent, Wiff gives fleeting online
+      identities a form that can be experienced away from the screen.
   - type: image
     src: ./Images/fp19yBI02UNNxYuNRvGzmyxO4o.jpg
     aspectRatio: Default
@@ -57,35 +56,35 @@ content:
     placement: right
     alt: Wiff social campaign fragrance composition
     display: portrait
-    captionLabel: 02 –
     captionPosition: bottom
-    caption: >-
-      Scent is uniquely powerful in preserving memories and evoking emotion,
-      making it the ideal medium to anchor transient online experiences. Each
-      fragrance in Wiff is named and cataloged with a specific year, guiding the
-      imagination toward distinct eras. This approach positions scent as a tool
-      for nostalgic or speculative exploration, enhancing the user's sense of
-      connection and temporality.
   - type: video
     src: ./Images/y4TYPdlnQICFoVxjzNNoyzCKjI.mp4
     aspectRatio: Default
     placement: full
     alt: Wiff fragrance campaign motion sequence
     display: wide
+    captionLabel: 02 –
+    caption: >-
+      Each fragrance is named for a year associated with the world it evokes.
+      For cottagecore, 1663 suggests an imagined rural past, while 2000
+      recalls Y2K’s fascination with the future at the turn of the millennium.
+      The dates situate each scent within an imagined era, which can be
+      revisited through the memories and associations a scent brings up.
   - type: image
     src: ./Images/VO3yyfhXO0GXigphchuuuB3u4.jpg
     aspectRatio: Default
     placement: full
     alt: Wiff fragrance collection in a studio setting
     display: landscape
-    captionLabel: 03 –
     captionPosition: bottom
+    captionLabel: 03 –
     caption: >-
-      As online aesthetics evolve rapidly, capturing them through traditional
-      perfumery alone can be limiting. Wiff uses a custom GPT model to generate
-      and refine compositions, creating an adaptive, iterative process that
-      mirrors digital culture's shifts. Through scent, Wiff archives these
-      fleeting moments in a form that's both human and memorable.
+      Variation is part of Wiff’s visual identity. Colors, imagery, and motion
+      shift from one scent to the next, while the packaging and website follow
+      a shared structure. In both formats, an ingredient list appears
+      alongside a haiku and a moodboard, giving the collection room to take on
+      different aesthetics and visitors a familiar way to explore each
+      fragrance.
   - type: image
     src: ./Images/b9sXFprrVgzIIM9PbBuOj87S8.jpg
     aspectRatio: Default
@@ -94,7 +93,7 @@ content:
     display: landscape
 ---
 
-# Wiff — Editorial
+# Wiff Vertical
 
 This duplicate uses the split-stack layout: captions occupy the left half of
 the viewport while ordered media forms a vertical stack in the right half.

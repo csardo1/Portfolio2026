@@ -1,10 +1,13 @@
 import { createHash, randomUUID } from "node:crypto";
-import { copyFile, mkdir, open, readFile, readdir, realpath, rename, stat, unlink, writeFile } from "node:fs/promises";
+import { copyFile, lstat, mkdir, open, readFile, readdir, realpath, rename, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import matter from "gray-matter";
 import sharp from "sharp";
-import { colorFields, layouts, placements, ratios } from "./studio-types";
-import type { HomeDraft, ProjectDraft, StudioAsset, StudioProject, StudioState } from "./studio-types";
+import { assetReferenceKey, colorFields, isVideoCover, layouts, placements, projectAssetReferences, ratios } from "./studio-types";
+import type { BlockDraft, CaptionDraft, HomeDraft, ProjectDraft, StudioAsset, StudioProject, StudioState } from "./studio-types";
+
+// Release original image files after reading their metadata on Windows.
+sharp.cache({ files: 0 });
 
 const root = path.resolve(process.cwd(), "..", "..", "Portfolio", "Content");
 const siteRoot = path.resolve(process.cwd(), "..", "..", "Portfolio", "Site");
@@ -78,10 +81,33 @@ async function assets(id: string): Promise<StudioAsset[]> {
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((entry) => ({ src: `./Images/${entry.name}`, name: entry.name, type: mediaType(entry.name)! }));
 }
+function separateLegacyCaptions(content: BlockDraft[], layout?: string): BlockDraft[] {
+  return content.flatMap((block): BlockDraft[] => {
+    if (block?.type !== "image" && block?.type !== "video") return [block];
+    const { captionLabel, caption, captionPosition, ...media } = block;
+    const label = typeof captionLabel === "string" ? captionLabel : undefined;
+    const text = typeof caption === "string" ? caption : undefined;
+    if (!label?.trim() && !text?.trim()) return [media];
+    const captionBlock: CaptionDraft = { type: "caption" };
+    if (label !== undefined) captionBlock.label = label;
+    if (text !== undefined) captionBlock.text = text;
+    return layout === "split-stack" || String(captionPosition).trim().toLowerCase() === "top"
+      ? [captionBlock, media]
+      : [media, captionBlock];
+  });
+}
 export async function readProject(id: string): Promise<StudioProject> {
   const file = await structure(id);
   const doc = await document(file);
-  return { id, filename: path.basename(file), revision: doc.revision, data: { ...doc.data, content: doc.data.content ?? [] } as ProjectDraft, assets: await assets(id) };
+  const data = { ...doc.data, published: doc.data.published !== false, content: doc.data.content ?? [] } as ProjectDraft;
+  if (Array.isArray(data.content)) data.content = separateLegacyCaptions(data.content, data.layout);
+  return {
+    id,
+    filename: path.basename(file),
+    revision: doc.revision,
+    data,
+    assets: await assets(id),
+  };
 }
 export async function readStudio(): Promise<StudioState> {
   const folders = (await readdir(projectsRoot, { withFileTypes: true })).filter((entry) => entry.isDirectory());
@@ -105,6 +131,7 @@ async function checkAsset(id: string, src: unknown, type?: "image" | "video") {
   if (mediaType(file) === "image") {
     const metadata = await sharp(file).metadata();
     if (!metadata.width || !metadata.height) throw new StudioError("The image has no readable dimensions.");
+    return metadata;
   }
 }
 async function validateProject(id: string, data: ProjectDraft, state: StudioState) {
@@ -120,22 +147,50 @@ async function validateProject(id: string, data: ProjectDraft, state: StudioStat
   colors(data);
   const existing = state.projects.find((p) => p.id === id);
   if (existing?.data.slug === state.home.data.centerProject && (!data.published || data.slug !== existing.data.slug)) throw new StudioError("Choose another center project in Homepage settings before unpublishing or changing this URL.");
-  if (data.published || data.cover) await checkAsset(id, data.cover, "image");
+  if (data.published || data.cover) await checkAsset(id, data.cover);
+  if (isVideoCover(data.cover)) {
+    requiredText(data.coverPoster, "Video cover still");
+    const still = await checkAsset(id, data.coverPoster, "image");
+    if ((still?.pages ?? 1) > 1) throw new StudioError("The video cover still must be a single frame.");
+  }
   if (data.published) requiredText(data.coverAlt, "Cover description");
-  if (!Array.isArray(data.content)) throw new StudioError("Project media must be a list.");
-  for (const item of data.content) {
-    if (!item || !["image", "video"].includes(item.type)) throw new StudioError("Media must be an image or a video.");
+  if (!Array.isArray(data.content)) throw new StudioError("Project blocks must be a list.");
+  const syncGroups = new Map<string, number>();
+  const blockIds = new Set<string>();
+  for (const [index, item] of data.content.entries()) {
+    if (item?.id !== undefined) {
+      if (typeof item.id !== "string" || !item.id || blockIds.has(item.id)) throw new StudioError("Project block IDs must be unique text.");
+      blockIds.add(item.id);
+    }
+    if (item?.type === "caption") {
+      if ([item.label, item.text].some((value) => value !== undefined && typeof value !== "string")) {
+        throw new StudioError(`Caption block ${index + 1} must contain text.`);
+      }
+      if (!item.label?.trim() && !item.text?.trim()) throw new StudioError(`Enter a label or text for caption block ${index + 1}.`);
+      continue;
+    }
+    if (item?.type !== "image" && item?.type !== "video") throw new StudioError("A project block must be an image, video, or caption.");
+    if (item.hidden !== undefined && typeof item.hidden !== "boolean") throw new StudioError("Media visibility must be on or off.");
+    if (item.syncGroup !== undefined) {
+      if (item.type !== "video") throw new StudioError("Only videos can be paired for synced playback.");
+      if (typeof item.syncGroup !== "string" || !item.syncGroup || item.syncGroup !== item.syncGroup.trim()) {
+        throw new StudioError("Choose a valid video pair.");
+      }
+      syncGroups.set(item.syncGroup, (syncGroups.get(item.syncGroup) ?? 0) + 1);
+    }
     await checkAsset(id, item.src, item.type);
     if (!ratios.includes(item.aspectRatio ?? "Default")) throw new StudioError("Choose a supported aspect ratio.");
-    if (!["top", "bottom"].includes(item.captionPosition ?? "bottom")) throw new StudioError("Caption position must be top or bottom.");
     if (!placements.includes(item.placement ?? "full")) throw new StudioError("Media placement must be full, left, center or right.");
     if (item.display && !["landscape", "portrait", "square", "wide"].includes(item.display)) throw new StudioError("Unsupported video placeholder shape.");
-    for (const key of ["alt", "caption", "captionLabel"] as const) if (item[key] !== undefined && typeof item[key] !== "string") throw new StudioError(`${key} must be text.`);
+    if (item.alt !== undefined && typeof item.alt !== "string") throw new StudioError("Media description must be text.");
     if (item.poster) await checkAsset(id, item.poster, "image");
+  }
+  if ([...syncGroups.values()].some((count) => count !== 2)) {
+    throw new StudioError("Each synced pair must contain exactly two videos.");
   }
 }
 async function syncProject(id: string, data: ProjectDraft) {
-  const sources = new Set([data.cover, ...data.content.flatMap((item) => [item.src, item.poster])].filter(Boolean) as string[]);
+  const sources = new Set(projectAssetReferences(data, false));
   const publicRoot = path.join(siteRoot, "public", "content", "projects");
   await mkdir(publicRoot, { recursive: true });
   const target = path.join(publicRoot, data.slug);
@@ -148,6 +203,21 @@ async function syncProject(id: string, data: ProjectDraft) {
     const temporary = path.join(target, `.${randomUUID()}.tmp`);
     await copyFile(source, temporary);
     await rename(temporary, destination);
+
+    if (src === data.cover && path.extname(source).toLowerCase() === ".gif") {
+      const stillDirectory = path.join(target, "_cover");
+      await mkdir(stillDirectory, { recursive: true });
+      await safeExisting(target, stillDirectory);
+      const still = await sharp(source, { page: 0, pages: 1 }).webp({ lossless: true }).toBuffer();
+      const temporaryStill = path.join(stillDirectory, `.${randomUUID()}.tmp`);
+      await writeFile(temporaryStill, still, { flag: "wx" });
+      try {
+        await rename(temporaryStill, path.join(stillDirectory, `${path.basename(source)}.webp`));
+      } catch (error) {
+        await unlink(temporaryStill);
+        throw error;
+      }
+    }
   }
 }
 async function saveDocument(file: string, expected: string, data: Record<string, unknown>) {
@@ -173,6 +243,9 @@ export async function saveProject(id: string, expected: string, patch: ProjectDr
   if (!current) throw new StudioError("Project not found.", 404);
   if (current.revision !== expected) throw new StudioError("This project changed outside Studio. Reload from disk before saving.", 409);
   const data = { ...current.data, ...patch };
+  if (Array.isArray(data.content)) data.content = separateLegacyCaptions(data.content, data.layout);
+  if (current.data.cover !== data.cover) data.coverPoster = patch.coverPoster;
+  if (!isVideoCover(data.cover)) delete data.coverPoster;
   await validateProject(id, data, state);
   await syncProject(id, data);
   await saveDocument(await structure(id), expected, data);
@@ -200,12 +273,15 @@ export async function createProject(title: string, slug: string) {
   const folder = path.join(projectsRoot, slug);
   await mkdir(folder); // Exclusive creation: never merge with an existing folder.
   await mkdir(path.join(folder, "Images"));
-  await writeFile(path.join(folder, `Structure_${slug}.md`), matter.stringify(`\n# ${title.trim()}\n\nMedia order and captions are managed in the content list above.\n`, data), { flag: "wx" });
+  await writeFile(path.join(folder, `Structure_${slug}.md`), matter.stringify(`\n# ${title.trim()}\n\nProject blocks are ordered in the content list above.\n`, data), { flag: "wx" });
   return readProject(slug);
 }
-export async function uploadAsset(id: string, file: File) {
+export async function uploadAsset(id: string, file: File, expectedType?: StudioAsset["type"]) {
   if (!file.size || file.size > 100 * 1024 * 1024) throw new StudioError("Each upload must be between 1 byte and 100 MB.");
   const type = mediaType(file.name);
+  if (expectedType && type !== expectedType) {
+    throw new StudioError(expectedType === "image" ? "Choose a JPG, PNG, WebP, GIF or AVIF image." : "Choose an MP4, WebM or MOV video.");
+  }
   if (!type) throw new StudioError("Upload JPG, PNG, WebP, GIF, AVIF, MP4, WebM or MOV files.");
   const bytes = Buffer.from(await file.arrayBuffer());
   if (type === "image") {
@@ -228,4 +304,25 @@ export async function readAsset(id: string, src: string) {
   if (!mime) throw new StudioError("Unsupported preview type.");
   // Serve original image and video bytes without resizing or re-encoding.
   return { bytes: new Uint8Array(await readFile(file)), mime };
+}
+
+export async function removeLibraryAsset(id: string, src: string) {
+  const project = await readProject(id);
+  const asset = project.assets.find((entry) => entry.src === src);
+  if (!asset) throw new StudioError("That file is no longer in this project's library.", 404);
+  const key = assetReferenceKey(path.normalize(asset.src));
+  if (projectAssetReferences(project.data).some((reference) => assetReferenceKey(path.normalize(reference)) === key)) {
+    throw new StudioError("Remove the file from page blocks, covers, or posters and save before removing it from the library.", 409);
+  }
+
+  const folder = await directory(id);
+  const images = await safeExisting(folder, path.join(folder, "Images"));
+  const original = path.join(images, asset.name);
+  if (!(await lstat(original)).isFile()) throw new StudioError("Choose an original media file from this library.");
+
+  const backup = path.join(backupRoot, "media", id, randomUUID());
+  await mkdir(backup, { recursive: true });
+  await safeExisting(backupRoot, backup);
+  await rename(original, path.join(backup, asset.name));
+  return { src: asset.src };
 }

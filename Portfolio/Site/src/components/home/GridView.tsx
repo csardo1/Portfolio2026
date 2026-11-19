@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import {
   useEffect,
@@ -16,6 +15,7 @@ import type {
   WheelEvent,
 } from "react";
 import type { GridSize, Project } from "@/lib/content";
+import { ProjectCover } from "./ProjectCover";
 
 type LayoutMode = "wide" | "compact";
 type GridBreakpoint = "desktop" | "tablet" | "mobile";
@@ -580,6 +580,8 @@ export function GridView({
   }
 
   useEffect(() => {
+    const touchLayout = window.matchMedia("(hover: none) and (pointer: coarse)");
+
     function updateMetrics() {
       const styles = getComputedStyle(document.documentElement);
       const spacingM = readSpacingValue(styles, "--spacing-m", 18);
@@ -591,7 +593,7 @@ export function GridView({
       const breakpoint: GridBreakpoint =
         viewportWidth <= 767
           ? "mobile"
-          : viewportWidth <= 1099
+          : viewportWidth <= 1099 || touchLayout.matches
             ? "tablet"
             : "desktop";
       const mode = viewportHeight <= 900 ? "compact" : "wide";
@@ -655,7 +657,11 @@ export function GridView({
 
     updateMetrics();
     window.addEventListener("resize", updateMetrics);
-    return () => window.removeEventListener("resize", updateMetrics);
+    touchLayout.addEventListener("change", updateMetrics);
+    return () => {
+      window.removeEventListener("resize", updateMetrics);
+      touchLayout.removeEventListener("change", updateMetrics);
+    };
   }, []);
 
   useEffect(() => {
@@ -729,7 +735,7 @@ export function GridView({
     return (
       <section
         aria-label="Project grid"
-        className="home-view grid-list-view min-h-0 w-full flex-1 overflow-y-auto"
+        className="home-view grid-list-view min-h-0 w-full flex-1"
         data-breakpoint={metrics.breakpoint}
       >
         <div className="grid-list">
@@ -745,13 +751,10 @@ export function GridView({
               }}
             >
               <span className="grid-list-media">
-                <Image
-                  alt={project.coverAlt}
-                  className="object-cover"
-                  fill
+                <ProjectCover
                   loading="eager"
+                  project={project}
                   sizes="(max-width: 767px) calc(100vw - 48px), calc((100vw - 72px) / 2)"
-                  src={project.coverUrl}
                 />
               </span>
 
@@ -832,13 +835,10 @@ export function GridView({
               }
             >
               <span className="grid-tile-media">
-                <Image
-                  alt={project.coverAlt}
-                  className="object-cover"
-                  fill
+                <ProjectCover
                   loading="eager"
+                  project={project}
                   sizes="(max-width: 1099px) 280px, (max-height: 900px) 280px, 424px"
-                  src={project.coverUrl}
                 />
               </span>
 

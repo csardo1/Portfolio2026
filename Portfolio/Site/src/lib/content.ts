@@ -32,7 +32,6 @@ export type ProjectMediaAspectRatio =
 export type ProjectMediaAspectRatioSetting =
   | "Default"
   | ProjectMediaAspectRatio;
-export type ProjectMediaCaptionPosition = "top" | "bottom";
 export type ProjectMediaOrientation = "landscape" | "portrait" | "square";
 
 type StandardAspectRatio = {
@@ -121,16 +120,17 @@ export type ProjectMedia = {
   type: ProjectMediaType;
   src: string;
   alt: string;
-  captionLabel?: string;
-  caption?: string;
-  captionPosition: ProjectMediaCaptionPosition;
   placement: ProjectMediaPlacement;
   aspectRatio: string;
   aspectRatioLabel: ProjectMediaAspectRatioSetting;
   orientation: ProjectMediaOrientation;
   display: ProjectMediaDisplay;
   poster?: string;
+  syncGroup?: string;
 };
+
+export type ProjectCaption = { type: "caption"; label?: string; text?: string };
+export type ProjectBlock = ProjectMedia | ProjectCaption;
 
 export type Project = {
   title: string;
@@ -147,7 +147,8 @@ export type Project = {
   gridSize: GridSize;
   coverUrl: string;
   coverAlt: string;
-  content: ProjectMedia[];
+  coverMotion?: { type: "gif" | "video"; url: string };
+  content: ProjectBlock[];
 };
 
 function requiredString(value: unknown, field: string, file: string) {
@@ -294,21 +295,6 @@ function optionalMediaAspectRatio(
   return standardAspectRatio.label;
 }
 
-function optionalCaptionPosition(
-  value: unknown,
-  field: string,
-  file: string,
-): ProjectMediaCaptionPosition {
-  if (value === undefined || value === null || value === "") return "bottom";
-
-  const captionPosition = requiredString(value, field, file).toLowerCase();
-  if (captionPosition !== "top" && captionPosition !== "bottom") {
-    throw new Error(`${field} must be top or bottom in ${file}.`);
-  }
-
-  return captionPosition;
-}
-
 function projectAssetUrl(slug: string, value: unknown, field: string, file: string) {
   const source = requiredString(value, field, file);
   const normalizedSource = source.replaceAll("\\", "/");
@@ -318,6 +304,24 @@ function projectAssetUrl(slug: string, value: unknown, field: string, file: stri
   }
 
   return publicAssetPath(`/content/projects/${slug}/${path.basename(normalizedSource)}`);
+}
+
+function projectCover(slug: string, cover: unknown, poster: unknown, file: string): Pick<Project, "coverUrl" | "coverMotion"> {
+  const url = projectAssetUrl(slug, cover, "cover", file);
+  const extension = path.extname(url).toLowerCase();
+  if (extension === ".gif") {
+    return {
+      coverUrl: publicAssetPath(`/content/projects/${slug}/_cover/${path.basename(url)}.webp`),
+      coverMotion: { type: "gif", url },
+    };
+  }
+  if ([".mp4", ".webm", ".mov"].includes(extension)) {
+    return {
+      coverUrl: projectAssetUrl(slug, poster, "coverPoster", file),
+      coverMotion: { type: "video", url },
+    };
+  }
+  return { coverUrl: url };
 }
 
 function projectAssetPath(
@@ -441,27 +445,39 @@ async function findProjectStructure(projectDirectory: string) {
   return path.join(projectDirectory, structures[0]);
 }
 
-async function parseProjectMedia(
+async function parseProjectBlocks(
   value: unknown,
   slug: string,
   title: string,
   file: string,
   projectDirectory: string,
-): Promise<ProjectMedia[]> {
+  layout: ProjectLayout,
+): Promise<ProjectBlock[]> {
   if (value === undefined || value === null) return [];
   if (!Array.isArray(value)) {
     throw new Error(`content must be an ordered list in ${file}.`);
   }
 
-  return Promise.all(
-    value.map(async (item, index) => {
+  const blocks = await Promise.all(
+    value.map(async (item, index): Promise<ProjectBlock[]> => {
       if (!item || typeof item !== "object" || Array.isArray(item)) {
         throw new Error(`content[${index}] must be an object in ${file}.`);
       }
 
       const entry = item as Record<string, unknown>;
       const field = `content[${index}]`;
+      if (entry.type === "caption") {
+        const label = optionalString(entry.label);
+        const text = optionalString(entry.text);
+        if (!label && !text) throw new Error(`${field} must have a caption label or text in ${file}.`);
+        return [{ type: "caption", label, text }];
+      }
+
       const type = requiredMediaType(entry.type, `${field}.type`, file);
+      const label = optionalString(entry.captionLabel);
+      const text = optionalString(entry.caption);
+      const caption: ProjectCaption | undefined = label || text ? { type: "caption", label, text } : undefined;
+      if (entry.hidden === true) return caption ? [caption] : [];
       const display = optionalMediaDisplay(
         entry.display,
         type,
@@ -491,19 +507,12 @@ async function parseProjectMedia(
         ? projectAssetUrl(slug, entry.poster, `${field}.poster`, file)
         : undefined;
 
-      return {
+      const media: ProjectMedia = {
         type,
         src: projectAssetUrl(slug, entry.src, `${field}.src`, file),
         alt:
           optionalString(entry.alt) ??
           `${title} project ${type === "image" ? "image" : "video"} ${index + 1}`,
-        captionLabel: optionalString(entry.captionLabel),
-        caption: optionalString(entry.caption),
-        captionPosition: optionalCaptionPosition(
-          entry.captionPosition,
-          `${field}.captionPosition`,
-          file,
-        ),
         placement: optionalMediaPlacement(
           entry.placement,
           `${field}.placement`,
@@ -514,9 +523,25 @@ async function parseProjectMedia(
         orientation: aspectRatio.orientation,
         display,
         poster,
-      } satisfies ProjectMedia;
+        syncGroup: type === "video" ? optionalString(entry.syncGroup) : undefined,
+      };
+      if (!caption) return [media];
+
+      const beforeMedia = layout === "split-stack" || optionalString(entry.captionPosition)?.toLowerCase() === "top";
+      return beforeMedia ? [caption, media] : [media, caption];
     }),
   );
+  const visible = blocks.flat();
+  const visibleSyncCounts = new Map<string, number>();
+  for (const block of visible) {
+    if (block.type === "video" && block.syncGroup) {
+      visibleSyncCounts.set(block.syncGroup, (visibleSyncCounts.get(block.syncGroup) ?? 0) + 1);
+    }
+  }
+  for (const block of visible) {
+    if (block.type === "video" && block.syncGroup && visibleSyncCounts.get(block.syncGroup) === 1) delete block.syncGroup;
+  }
+  return visible;
 }
 
 export async function getHomeContent(): Promise<HomeContent> {
@@ -589,6 +614,7 @@ export async function getProjects(): Promise<Project[]> {
 
       const title = requiredString(data.title, "title", file);
       const slug = requiredString(data.slug, "slug", file);
+      const layout = optionalProjectLayout(data.layout, file);
       const tags = Array.isArray(data.tags)
         ? data.tags.map((tag) => requiredString(tag, "tags[]", file))
         : [];
@@ -597,7 +623,7 @@ export async function getProjects(): Promise<Project[]> {
         title,
         slug,
         year: requiredNumber(data.year, "year", file),
-        layout: optionalProjectLayout(data.layout, file),
+        layout,
         backgroundColor: requiredColor(
           data.backgroundColor,
           "backgroundColor",
@@ -626,14 +652,15 @@ export async function getProjects(): Promise<Project[]> {
         tags,
         homeOrder: requiredNumber(data.homeOrder, "homeOrder", file),
         gridSize: requiredGridSize(data.gridSize, file),
-        coverUrl: projectAssetUrl(slug, data.cover, "cover", file),
+        ...projectCover(slug, data.cover, data.coverPoster, file),
         coverAlt: requiredString(data.coverAlt, "coverAlt", file),
-        content: await parseProjectMedia(
+        content: await parseProjectBlocks(
           data.content,
           slug,
           title,
           file,
           projectDirectory,
+          layout,
         ),
       } satisfies Project;
     }),

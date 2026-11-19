@@ -1,6 +1,7 @@
 import { copyFile, lstat, mkdir, readFile, readdir, rm } from "node:fs/promises";
 import path from "node:path";
 import matter from "gray-matter";
+import sharp from "sharp";
 
 const siteRoot = path.resolve(import.meta.dirname, "..");
 const projectRoot = path.resolve(siteRoot, "..", "Content", "Projects");
@@ -27,10 +28,11 @@ async function findProjectStructure(projectDirectory) {
 
 function collectAssetPaths(data) {
   const assets = [data.cover];
+  if (/\.(mp4|webm|mov)$/i.test(data.cover)) assets.push(data.coverPoster);
 
   if (Array.isArray(data.content)) {
     for (const entry of data.content) {
-      if (entry && typeof entry === "object") {
+      if (entry && entry.hidden !== true && (entry.type === "image" || entry.type === "video")) {
         assets.push(entry.src, entry.poster);
       }
     }
@@ -79,6 +81,14 @@ await Promise.all(
             source,
             path.join(destinationDirectory, path.basename(source)),
           );
+
+          if (asset === data.cover && path.extname(source).toLowerCase() === ".gif") {
+            const stillDirectory = path.join(destinationDirectory, "_cover");
+            await mkdir(stillDirectory, { recursive: true });
+            await sharp(source, { page: 0, pages: 1 }).webp({ lossless: true }).toFile(
+              path.join(stillDirectory, `${path.basename(source)}.webp`),
+            );
+          }
         }),
       );
     }),

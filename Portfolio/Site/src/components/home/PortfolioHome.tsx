@@ -52,7 +52,7 @@ export function PortfolioHome({ home, projects }: PortfolioHomeProps) {
         <SiteHeader home={home} />
 
         <div className="relative flex min-h-0 flex-1 flex-col">
-          <div className="home-view-frame relative flex min-h-0 flex-1 overflow-hidden">
+          <div className="home-view-frame relative flex min-h-0 flex-1 overflow-clip">
             {view === "grid" ? (
               <GridView
                 centerProject={home.centerProject}
