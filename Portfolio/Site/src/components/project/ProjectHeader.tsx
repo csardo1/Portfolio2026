@@ -12,11 +12,6 @@ export function ProjectHeader({
 }) {
   return (
     <header className="project-header">
-      <div className="project-heading">
-        <h1>{project.title}</h1>
-        <p>{project.tags.join(" – ")}</p>
-      </div>
-
       <Link
         className="nav-label asterisk-interaction project-work-link"
         href="/"
@@ -28,6 +23,11 @@ export function ProjectHeader({
         className="nav-label asterisk-interaction project-about-button"
         label={home.aboutLabel}
       />
+
+      <div className="project-heading">
+        <h1>{project.title}</h1>
+        <p>{project.tags.join(" – ")}</p>
+      </div>
     </header>
   );
 }

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { ProjectBlock, ProjectCaption } from "@/lib/content";
+import { mobileImageSizes } from "@/lib/mobile-layout";
 import { ProjectDecodingCaption } from "./ProjectDecodingCaption";
 import { ProjectLightbox } from "./ProjectLightbox";
 import { useSyncedVideoStart } from "./useSyncedVideoStart";
@@ -139,7 +140,7 @@ export function ProjectSplitStack({
                   className="object-cover"
                   fill
                   loading={mediaIndex < 2 ? "eager" : "lazy"}
-                  sizes="(max-width: 767px) calc(100vw - 48px), 50vw"
+                  sizes={mobileImageSizes("50vw")}
                   src={item.src}
                 />
               ) : (

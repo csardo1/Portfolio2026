@@ -91,7 +91,8 @@ export function ProjectDecodingCaption({
 }: {
   className?: string;
   item: ProjectCaption;
-  rootRef?: RefObject<HTMLElement | null>;
+  // A null root observes the viewport. Omitting the root decodes on mount.
+  rootRef?: RefObject<HTMLElement | null> | null;
   semantic?: boolean;
 }) {
   const captionRef = useRef<HTMLDivElement>(null);
@@ -243,7 +244,7 @@ export function ProjectDecodingCaption({
     });
     previousCaptionRef.current = { body, label };
 
-    if (!rootRef) {
+    if (rootRef === undefined) {
       startDecoding(
         transitionCharacters,
         isInitialCaption ? captionRewriteInitialHold : 0,
@@ -264,8 +265,8 @@ export function ProjectDecodingCaption({
       };
     }
 
-    const root = rootRef.current;
-    if (!root) return;
+    const root = rootRef?.current ?? null;
+    if (rootRef && !root) return;
 
     const observer = new IntersectionObserver(
       (entries) => {

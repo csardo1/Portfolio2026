@@ -8,6 +8,7 @@ import type {
   WheelEvent,
 } from "react";
 import type { ProjectBlock, ProjectMedia } from "@/lib/content";
+import { mobileImageSizes, useMobileLayout } from "@/lib/mobile-layout";
 import { ProjectDecodingCaption } from "./ProjectDecodingCaption";
 import { useSyncedVideoStart } from "./useSyncedVideoStart";
 
@@ -87,6 +88,7 @@ export function ProjectCarousel({
   projectTitle: string;
 }) {
   const carouselRef = useRef<HTMLElement>(null);
+  const isMobile = useMobileLayout();
   const wheelAnimationRef = useRef<number | null>(null);
   const wheelTargetRef = useRef(0);
   const [intrinsicVideoRatios, setIntrinsicVideoRatios] = useState<
@@ -235,7 +237,7 @@ export function ProjectCarousel({
           if (item.type === "caption") {
             return (
               <div className="project-carousel-caption-block" data-project-block="caption" key={`caption-${index}`}>
-                <ProjectDecodingCaption item={item} rootRef={carouselRef} />
+                <ProjectDecodingCaption item={item} rootRef={isMobile ? null : carouselRef} />
               </div>
             );
           }
@@ -269,7 +271,7 @@ export function ProjectCarousel({
                     className="object-cover"
                     fill
                     loading={mediaIndex < 2 ? "eager" : "lazy"}
-                    sizes="(max-width: 767px) 92vw, 800px"
+                    sizes={mobileImageSizes("800px")}
                     src={item.src}
                   />
                 ) : (

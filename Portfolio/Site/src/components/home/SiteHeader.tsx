@@ -6,10 +6,6 @@ import { AsteriskLabel } from "@/components/AsteriskLabel";
 export function SiteHeader({ home }: { home: HomeContent }) {
   return (
     <header className="site-header pointer-events-none absolute inset-0 z-[70]">
-      <p className="site-intro pointer-events-auto">
-        {home.intro}
-      </p>
-
       <Link
         aria-current="page"
         className="nav-label site-nav-work asterisk-interaction is-active pointer-events-auto"
@@ -22,6 +18,10 @@ export function SiteHeader({ home }: { home: HomeContent }) {
         className="nav-label site-nav-about asterisk-interaction pointer-events-auto"
         label={home.aboutLabel}
       />
+
+      <p className="site-intro pointer-events-auto">
+        {home.intro}
+      </p>
     </header>
   );
 }

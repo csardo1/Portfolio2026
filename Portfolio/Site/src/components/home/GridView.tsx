@@ -15,6 +15,7 @@ import type {
   WheelEvent,
 } from "react";
 import type { GridSize, Project } from "@/lib/content";
+import { mobileImageSizes, mobileLayoutQuery } from "@/lib/mobile-layout";
 import { ProjectCover } from "./ProjectCover";
 
 type LayoutMode = "wide" | "compact";
@@ -580,6 +581,7 @@ export function GridView({
   }
 
   useEffect(() => {
+    const mobileLayout = window.matchMedia(mobileLayoutQuery);
     const touchLayout = window.matchMedia("(hover: none) and (pointer: coarse)");
 
     function updateMetrics() {
@@ -591,7 +593,7 @@ export function GridView({
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
       const breakpoint: GridBreakpoint =
-        viewportWidth <= 767
+        mobileLayout.matches
           ? "mobile"
           : viewportWidth <= 1099 || touchLayout.matches
             ? "tablet"
@@ -605,7 +607,7 @@ export function GridView({
       const canvasCenterY = (gridBounds?.top ?? 0) + canvasHeight / 2;
       const blockedZones = [
         ...document.querySelectorAll(
-          '.site-header .nav-label, .site-header .site-intro, [role="group"][aria-label="Project display"]',
+          '.site-header > .nav-label, .site-header > .site-intro, [role="group"][aria-label="Project display"]',
         ),
       ].map((element) => {
         const bounds = element.getBoundingClientRect();
@@ -754,7 +756,7 @@ export function GridView({
                 <ProjectCover
                   loading="eager"
                   project={project}
-                  sizes="(max-width: 767px) calc(100vw - 48px), calc((100vw - 72px) / 2)"
+                  sizes={mobileImageSizes("calc((100vw - 72px) / 2)")}
                 />
               </span>
 

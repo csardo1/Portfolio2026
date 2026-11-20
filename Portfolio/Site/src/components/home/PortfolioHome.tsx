@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { HomeContent, HomeView, Project } from "@/lib/content";
+import { useMobileLayout } from "@/lib/mobile-layout";
 import { GridView } from "./GridView";
 import type { DesktopGridSession } from "./GridView";
 import { IndexView } from "./IndexView";
@@ -26,6 +27,7 @@ type PageColorStyle = CSSProperties & {
 
 export function PortfolioHome({ home, projects }: PortfolioHomeProps) {
   const [view, setView] = useState<HomeView>(home.defaultView);
+  const activeView = useMobileLayout() ? "grid" : view;
   const desktopGridSession = useRef<DesktopGridSession>({
     metrics: null,
     seed: null,
@@ -53,7 +55,7 @@ export function PortfolioHome({ home, projects }: PortfolioHomeProps) {
 
         <div className="relative flex min-h-0 flex-1 flex-col">
           <div className="home-view-frame relative flex min-h-0 flex-1 overflow-clip">
-            {view === "grid" ? (
+            {activeView === "grid" ? (
               <GridView
                 centerProject={home.centerProject}
                 gridSession={desktopGridSession.current}
