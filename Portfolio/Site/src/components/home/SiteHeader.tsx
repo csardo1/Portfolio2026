@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { HomeContent } from "@/lib/content";
+import { AboutWindow } from "@/components/AboutWindow";
 import { AsteriskLabel } from "@/components/AsteriskLabel";
 
 export function SiteHeader({ home }: { home: HomeContent }) {
@@ -17,9 +18,10 @@ export function SiteHeader({ home }: { home: HomeContent }) {
         <AsteriskLabel>{home.workLabel}</AsteriskLabel>
       </Link>
 
-      <button className="nav-label site-nav-about asterisk-interaction pointer-events-auto" type="button">
-        <AsteriskLabel>{home.aboutLabel}</AsteriskLabel>
-      </button>
+      <AboutWindow
+        className="nav-label site-nav-about asterisk-interaction pointer-events-auto"
+        label={home.aboutLabel}
+      />
     </header>
   );
 }

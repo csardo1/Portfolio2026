@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { HomeContent, Project } from "@/lib/content";
+import { AboutWindow } from "@/components/AboutWindow";
 import { AsteriskLabel } from "@/components/AsteriskLabel";
 
 export function ProjectHeader({
@@ -23,12 +24,10 @@ export function ProjectHeader({
         <AsteriskLabel>{home.workLabel}</AsteriskLabel>
       </Link>
 
-      <button
+      <AboutWindow
         className="nav-label asterisk-interaction project-about-button"
-        type="button"
-      >
-        <AsteriskLabel>{home.aboutLabel}</AsteriskLabel>
-      </button>
+        label={home.aboutLabel}
+      />
     </header>
   );
 }
